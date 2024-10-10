@@ -142,7 +142,8 @@ let no_repeats xs =
 
 (* 13 *)
 let rec recursive_no_field_repeats j = 
-  no_repeats (one_fields j)
+
+
 (* 14 *)
 let count_occurrences xs =
   failwith "Need to implement: count_occurrences"
