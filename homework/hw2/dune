@@ -1,0 +1,31 @@
+(library
+ (name hw2)
+ (libraries json json_structures)
+ (modules hw2))
+
+(library
+ (name hw2challenge)
+ (libraries hw2 json json_structures)
+ (modules hw2challenge))
+
+(library
+ (name json_structures)
+ (libraries json)
+ (modules parsed_complete_bus parsed_medium_bus parsed_small_bus))
+
+(library
+ (name json)
+ (modules json))
+
+(library
+ (name hw2test)
+ (modules hw2test)
+ (inline_tests)
+ (libraries hw2 hw2challenge)
+ (preprocess
+  (pps ppx_inline_test)))
+
+(env
+ (dev
+  (flags
+   (:standard -warn-error -A -w -27 -w -39 -w -33 -w -26))))
