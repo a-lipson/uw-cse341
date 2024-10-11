@@ -124,12 +124,8 @@ let rec dots (j, fs) =
 
 (* 11 *)
 let one_fields j =
-  let rec aux js acc = 
-    match js with 
-    | [] -> acc 
-    | (k, _) :: js -> aux js (k :: acc) (* could also use firsts here *)
-  in match j with 
-  | Object o -> aux o []
+  match j with 
+  | Object o -> firsts o
   | _ -> []
 
 (* let one_fields j = *)
