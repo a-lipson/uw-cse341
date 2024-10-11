@@ -58,7 +58,6 @@ let rec string_of_json j =
   let rec parse f js = (* oh map, my dear friend... where art thou? *)
     match js with 
     | [] -> []
-    | [v] -> [f v]
     | v::vs -> f v :: parse f vs
   in 
   match j with 
