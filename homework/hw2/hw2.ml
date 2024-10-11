@@ -53,24 +53,22 @@ let quote_string s = "\"" ^ s ^ "\""
 
 (* 4 *)
 let rec string_of_json j =
+  let parse_array_item x = string_of_json x in
+  let parse_object_item (k,v) = quote_string k ^ " : " ^ string_of_json v in
+  let rec parse f js = (* oh map, my dear friend... where art thou? *)
+    match js with 
+    | [] -> []
+    | [v] -> [f v]
+    | v::vs -> f v :: parse f vs
+  in 
   match j with 
   | Null -> "null"
   | False -> "false"
   | True -> "true"
   | Num x -> json_string_of_float x
   | String s -> quote_string s
-  | Array l -> let rec parse_array js = 
-    match js with 
-    | [] -> []
-    | [x] -> [string_of_json x]
-    | x::xs -> string_of_json x :: parse_array xs
-    in "[" ^ concat_with (", ", parse_array l) ^ "]" 
-  | Object o -> let rec parse_object js =
-    match js with 
-    | [] -> []
-    | [(k,v)] -> [quote_string k ^ " : " ^ string_of_json v]
-    | (k,v)::xs -> (quote_string k ^ " : " ^ string_of_json v) :: parse_object xs
-    in "{" ^ concat_with (", ", parse_object o) ^ "}"
+  | Array l -> "[" ^ concat_with (", ", parse parse_array_item l) ^ "]" 
+  | Object o -> "{" ^ concat_with (", ", parse parse_object_item o) ^ "}"
 
 (* 5 *)
 let rec take (n,xs) = 
@@ -118,7 +116,7 @@ let rec dots (j, fs) =
   match j, fs with 
   | _, [] -> None 
   | Object o, f::[] -> assoc (f, o)
-  | Object _, f::fs -> 
+  | Object _, f::fs ->
     (match dot (j, f) with 
     | Some v -> dots (v, fs)
     | None -> None)
@@ -127,34 +125,73 @@ let rec dots (j, fs) =
 
 (* 11 *)
 let one_fields j =
-  let rec aux js acc =
+  let rec aux js acc = 
     match js with 
     | [] -> acc 
-    | (k, Object o) :: js' -> aux o (aux js' (k :: acc)) (* FIXME: nested nonsense *)
-    | (k, _) :: js' -> aux js' (k :: acc)
+    | (k, _) :: js -> aux js (k :: acc) (* could also use firsts here *)
   in match j with 
   | Object o -> aux o []
   | _ -> []
 
+(* let one_fields j = *)
+(*   let rec aux js acc = *)
+(*     match js with  *)
+(*     | [] -> acc  *)
+(*     | (k, Object o) :: js' -> aux o (aux js' (k :: acc)) (* FIXME: nested nonsense *) *)
+(*     | (k, _) :: js' -> aux js' (k :: acc)  *)
+(*   in match j with  *)
+(*   | Object o -> aux o [] *)
+(*   | _ -> [] *)
+
 (* 12 *)
-let no_repeats xs = 
-  List.length (dedup xs) = List.length xs
+let no_repeats xs = List.length (dedup xs) = List.length xs
 
 (* 13 *)
 let rec recursive_no_field_repeats j = 
-
+  let rec arrays js = 
+    match js with 
+    | [] -> true
+    | j :: js -> recursive_no_field_repeats j && arrays js
+  in 
+  let rec objects js = 
+    match js with 
+    | [] -> true 
+    | (_,v) :: js -> recursive_no_field_repeats v && objects js
+  in 
+  no_repeats (one_fields j) && 
+  match j with 
+    | Array l -> arrays l
+    | Object o -> objects o 
+    | _ -> true
 
 (* 14 *)
+(* assume xs sorted *)
 let count_occurrences xs =
-  failwith "Need to implement: count_occurrences"
+  let rec aux s n xs acc =
+    match xs with 
+    | [] -> (s,n) :: acc
+    | x :: xs -> if s = x then 
+      aux s (n+1) xs acc else (* cont. to rest while updating current count *)
+      aux x 1 xs ((s,n) :: acc) (* push prev count pair to acc then start next count *)
+  in match xs with 
+  | [] -> [] 
+  | x::xs -> aux x 1 xs []
 
 (* 15 *)
 let rec string_values_for_access_path (fs, js) = 
-  failwith "Need to implement: string_values_for_access_path"
+    match js with 
+    | [] -> []
+    | j :: js -> match dots (j, fs) with 
+      | Some (String s) -> s :: string_values_for_access_path (fs, js)
+      | _ -> string_values_for_access_path (fs, js)
 
 (* 16 *)
 let rec filter_access_path_value (fs, v, js) = 
-  failwith "Need to implement: filter_access_path_value"
+  match js with 
+  | [] -> [] 
+  | j :: js -> match dots (j, fs) with 
+    | Some (String s) -> if s = v then j :: filter_access_path_value (fs, v, js) else []
+    | _ -> filter_access_path_value (fs, v, js)
 
 (* Types for use in problems 17-20. *)
 type rect = { min_latitude: float; max_latitude: float;
@@ -163,27 +200,59 @@ type point = { latitude: float; longitude: float }
 
 (* 17 *)
 let in_rect (r, p) = 
-  failwith "Need to implement: in_rect"
+  r.min_latitude <= p.latitude && p.latitude <= r.max_latitude &&
+  r.min_longitude <= p.longitude && p.longitude <= r.max_longitude
 
 (* 18 *)
 let point_of_json j = 
-  failwith "Need to implement: point_of_json"
+  match dot (j, "latitude") with 
+  | Some (Num lat) -> (match dot (j, "longitude") with 
+    | Some (Num long) -> Some { latitude = lat ; longitude = long}
+    | _ -> None)
+  | _ -> None
 
 (* 19 *)
 let rec filter_access_path_in_rect (fs, r, js) = 
-  failwith "Need to implement: filter_access_path_in_rect"
+  match js with 
+  | [] -> [] 
+  | j :: js -> (match dots (j, fs) with 
+    | Some j' -> (match point_of_json j' with 
+      | Some p -> if in_rect (r, p) then [j] else []
+      | None -> [])
+    | None -> []) @ filter_access_path_in_rect (fs, r, js) (* ideally would like to not use concat... *)
 
 (* 20 *)
 (* write your comment here *)
+(*
+ * Both filter_access_path_* functions filter an input json list based on 
+ * the presence of a certain value at a given path. 
+ * We can proceed to abstract this behavior by implementing the following 
+ * function filter_access_path which uses a function f which acts on the value 
+ * at the given path to determine whether the origin json in the json list input 
+ * should be kept. 
+ * 
 
+ let rec filter_access_path (fs, f, js) = 
+  match js with 
+  | [] -> [] 
+  | j :: js -> (match dots (j, fs) with 
+    | Some x -> if f x then j :: filter_access_path (fs, f, js) else []
+    | None -> filter_access_path (fs, f, js)
+
+ * 
+ * i am merely somewhat/10 annoyed, i suppose, as we cannot do the following: 
+
+ let filter_access_path fs f = List.filter (fun j -> Option.exists f (dots (j, fs)))
+
+ * which allows us to both abstract the logic and produce a one-line readable function!
+ *)
+    
 (* For this section, we provide the definition of U district and the functions
  * to calculate a histogram. Use these to create the bindings as requested. 
  * But notice our implementation of histogram uses *your* definition of count_occurrences
  *)
  (* We provide this code commented out because it uses some of your functions 
     that you haven't implemented yet *)
-
-(*
 
 (* The definition of the U district for purposes of this assignment :) *)
 let u_district =
@@ -214,8 +283,8 @@ let complete_bus_positions_list =
   | Some (Array xs) -> xs
   | _ -> failwith "complete_bus_positions_list"
 
-*)
 exception Unimplemented
+
 let route_histogram     = Unimplemented
 let top_three_routes    = Unimplemented
 let buses_in_ud         = Unimplemented

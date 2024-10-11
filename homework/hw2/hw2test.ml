@@ -56,7 +56,8 @@ let%test "dots_test_present" = dots (Object [("f", Object [("g", String "gotcha"
 let%test "dots_test_missing" = dots (Object [("f", Object [("g", String "gotcha")])], ["f"; "h"]) = None
 
 let%test "one_fields_top" = one_fields json_obj = List.rev ["foo";"bar";"ok"]
-let%test "one_fields_nested" = one_fields (Object [("a", Object [("b", True)])]) = List.rev ["a";"b"]
+let%test "one_fields_nested" = one_fields (Object [("a", Object [("b", True)])]) = List.rev ["a"]
+(* let%test "one_fields_nested" = one_fields (Object [("a", Object [("b", True)])]) = List.rev ["a";"b"] *)
 
 let%test "no_repeats_test_repeats" = not (no_repeats ["foo";"bar";"foo"])
 let%test "no_repeats_test_clear" = (no_repeats ["foo";"bar";"baz"])
@@ -67,39 +68,60 @@ let nest = Array [Object [];
                                      ("foo",True)]);
                          ("c",True)];
                   Object []]
-(* let%test "test13" = not (recursive_no_field_repeats nest) *)
+
+
+let distinct_duplicates = Array [Object [];
+                  Object[("a",True);
+                         ("b",Object[("foo",True)]);
+                         ("c",Object[("foo",True)])];
+                  Object []]
+
+
+let%test "recursive_no_field_repeats_test_nested" = not (recursive_no_field_repeats nest)
+let%test "recursive_no_field_repeats_test_distinct" = recursive_no_field_repeats distinct_duplicates
+let%test "recursive_no_field_repeats_test_clean" = recursive_no_field_repeats json_obj
 
 (* Any order is allowed by the specification, so it's ok to fail this test because of a different order. 
    You can edit this test to match your implementation's order. *)
-(* let%test "test14a" = count_occurrences (["a"; "a"; "b"]) = [("b",1);("a",2)] *)
+let%test "count_occurrences_test_some" = count_occurrences (["a"; "a"; "b"]) = [("b",1);("a",2)]
+let%test "count_occurrences_test_empty" = count_occurrences [] = []
 
-(* let%test "test15" = string_values_for_access_path (["x"; "y"], [Object [("a", True);("x", Object [("y", String "foo")])];
-                                                             Object [("x", Object [("y", String "bar")]); ("b", True)]])
-            = ["foo";"bar"] *)
+let%test "string_values_for_access_path_test_some" = string_values_for_access_path (
+  ["x"; "y"], [Object [("a", True);("x", Object [("y", String "foo")])]; Object [("x", Object [("y", String "bar")]); ("b", True)]])
+            = ["foo";"bar"]
 
-(* let%test "test16" = filter_access_path_value (["x"; "y"], "foo",
+let%test "filter_access_path_value_test_some" = filter_access_path_value (["x"; "y"], "foo",
                                            [Object [("x", Object [("y", String "foo")]); ("z", String "bar")];
                                             Object [("x", Object [("y", String "foo")]); ("z", String "baz")];
                                             Object [("x", String "a")];
                                             Object []])
              = 
              [Object [("x", Object [("y", String "foo")]); ("z", String "bar")];
-              Object [("x", Object [("y", String "foo")]); ("z", String "baz")]] *)
+              Object [("x", Object [("y", String "foo")]); ("z", String "baz")]]
 
 
 let pgascse =
-  { latitude = 47.653221;
-    longitude = -122.305708 }
+  { latitude = 47.653221
+  ; longitude = -122.305708 }
 
-(* let%test "test17" = in_rect (u_district, pgascse) *)
+let u_district =
+  { min_latitude  =  47.648637
+  ; min_longitude = -122.322099
+  ; max_latitude  =  47.661176
+  ; max_longitude = -122.301019 }
+
+let%test "in_rect_test_in" = in_rect (u_district, pgascse)
+let%test "in_rect_test_out" = not (in_rect (u_district, { latitude = 50. ; longitude = 120. }))
 
 let json_pgascse = Object [("latitude", Num 47.653221); ("longitude", Num (-122.305708))]
 
-(* let%test "test18" = point_of_json json_pgascse = Some pgascse *)
+let%test "point_of_json_test_some" = point_of_json json_pgascse = Some pgascse
+let%test "point_of_json_test_part" = point_of_json (Object [("latitude", Num 0.)]) = None
+let%test "point_of_json_test_bad_type" = point_of_json (Object [("latitude", True);("longitude", False)]) = None
+let%test "point_of_json_test_none" = point_of_json json_obj = None
 
-(* let%test "test19" = filter_access_path_in_rect (["x"; "y"], u_district, [Object [("x", Object [("y", json_pgascse)])]; Object []])
-             = [Object [("x", Object [("y", json_pgascse)])]] *)
-
+let%test "filter_access_path_in_rect_test" = filter_access_path_in_rect (["x"; "y"], u_district, [Object [("x", Object [("y", json_pgascse)])]; Object []])
+             = [Object [("x", Object [("y", json_pgascse)])]]
 
 (* Challenge problems *)
 
