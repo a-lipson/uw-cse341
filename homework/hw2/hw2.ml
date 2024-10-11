@@ -145,7 +145,7 @@ let no_repeats xs = List.length (dedup xs) = List.length xs
 let rec recursive_no_field_repeats j = 
   let objects x = x (* id *) in
   let arrays (_,v) = v in
-  let rec aux f xs = (* List.fold_left (&&) true (List.map (recursive_no_field_repeats % f) xs) 
+  let rec aux f xs = (* List.fold_left (&&) true (List.map (recursive_no_field_repeats % f) xs) *)
     match xs with
     | [] -> true
     | x :: xs -> recursive_no_field_repeats x && aux f xs
