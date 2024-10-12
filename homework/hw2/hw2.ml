@@ -143,12 +143,12 @@ let no_repeats xs = List.length (dedup xs) = List.length xs
 
 (* 13 *)
 let rec recursive_no_field_repeats j = 
-  let objects x = x (* id *) in
-  let arrays (_,v) = v in
+  let objects (_,v) = v in
+  let arrays x = x (* id *) in
   let rec aux f xs = (* List.fold_left (&&) true (List.map (recursive_no_field_repeats % f) xs) *)
     match xs with
     | [] -> true
-    | x :: xs -> recursive_no_field_repeats x && aux f xs
+    | x :: xs -> recursive_no_field_repeats (f x) && aux f xs
   in
   no_repeats (one_fields j) && 
   match j with 

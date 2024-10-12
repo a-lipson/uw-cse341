@@ -55,8 +55,8 @@ let%test "dot_test_not_object" = dot (json_pi, "a") = None
 let%test "dots_test_present" = dots (Object [("f", Object [("g", String "gotcha")])], ["f"; "g"]) = Some (String "gotcha")
 let%test "dots_test_missing" = dots (Object [("f", Object [("g", String "gotcha")])], ["f"; "h"]) = None
 
-let%test "one_fields_top" = one_fields json_obj = List.rev ["foo";"bar";"ok"]
-let%test "one_fields_nested" = one_fields (Object [("a", Object [("b", True)])]) = List.rev ["a"]
+let%test "one_fields_top" = one_fields json_obj = ["foo";"bar";"ok"]
+let%test "one_fields_nested" = one_fields (Object [("a", Object [("b", True)])]) = ["a"]
 (* let%test "one_fields_nested" = one_fields (Object [("a", Object [("b", True)])]) = List.rev ["a";"b"] *)
 
 let%test "no_repeats_test_repeats" = not (no_repeats ["foo";"bar";"foo"])
