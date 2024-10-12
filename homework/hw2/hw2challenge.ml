@@ -149,10 +149,15 @@ let lexical_error msg = raise (LexicalError ("Lexical error: " ^ msg))
          function to recursively look for the closing double quote,
          returning the string of characters in between, and the remainder.
 *)
+(* consume_string_literal :: char list -> (string, char list) *)
 let consume_string_literal cs = 
-  (* TODO: add about 10 lines of code to this function, and edit the "failwith" line below. *)
-  match cs with
-    '\"' :: cs -> failwith "consume_string_literal should now call a helper function to consume rest of string"
+  let rec consumer cs acc = 
+    match cs with 
+    | [] -> lexical_error "No closing double quote for string literal."
+    | c :: cs -> if c = '\"' then (acc, cs) else 
+        consumer cs (acc ^ char_to_string c)
+  in match cs with
+  | '\"' :: cs -> consumer cs ""
   | _ -> lexical_error "Expecting string literal."
 
 
@@ -179,11 +184,23 @@ let consume_string_literal cs =
 
          You can check whether a character `c` is alphabetic using the
          provided helper function is_alpha.
-
+  
    Either of the above strategies will receive full credit.
 *)
 let consume_keyword cs = 
-  (* TODO, about 15 lines *) failwith "consume_keyword unimplemented"
+  let keyword_tokens = [("true", TrueTok); ("false", FalseTok); ("null", NullTok)] in
+  let rec consumer cs acc = 
+    match cs with 
+    | [] -> (acc, cs) (* throw lexical_error? *)
+    | c :: cs -> if is_alpha c then 
+      consumer cs (acc ^ char_to_string c) else 
+      (acc, c::cs)
+  in let (keyword, cs') = (consumer cs "")
+  in match assoc (keyword, keyword_tokens) with
+  | Some t -> (t, cs')
+  | None -> lexical_error "Expecting keyword literal."
+
+
 
 (* Here's a provided consumer for numbers, since it's a bit complex.
    You shouldn't need to understand this code unless you want to.

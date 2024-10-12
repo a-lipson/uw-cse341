@@ -99,7 +99,6 @@ let%test "filter_access_path_value_test_some" = filter_access_path_value (["x"; 
              [Object [("x", Object [("y", String "foo")]); ("z", String "bar")];
               Object [("x", Object [("y", String "foo")]); ("z", String "baz")]]
 
-
 let pgascse =
   { latitude = 47.653221
   ; longitude = -122.305708 }
@@ -125,9 +124,9 @@ let%test "filter_access_path_in_rect_test" = filter_access_path_in_rect (["x"; "
 
 (* Challenge problems *)
 
-(* let%test "testC1" = consume_string_literal (char_list_of_string "\"foo\" : true") = ("foo", [' '; ':'; ' '; 't'; 'r'; 'u'; 'e']) *)
+let%test "consume_string_literal_test" = consume_string_literal (char_list_of_string "\"foo\" : true") = ("foo", [' '; ':'; ' '; 't'; 'r'; 'u'; 'e'])
 
-(* let%test "testC2" = consume_keyword (char_list_of_string "false foo") = (FalseTok, [' '; 'f'; 'o'; 'o']) *)
+let%test "consume_keyword_test" = consume_keyword (char_list_of_string "false foo") = (FalseTok, [' '; 'f'; 'o'; 'o'])
 
 (* let%test "testC3" = tokenize_char_list (char_list_of_string "{ \"foo\" : 3.14, \"bar\" : [true, false] }")
              = [LBrace; StringLit "foo"; Colon; NumLit "3.14"; Comma; StringLit "bar";

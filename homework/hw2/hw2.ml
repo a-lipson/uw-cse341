@@ -145,7 +145,7 @@ let no_repeats xs = List.length (dedup xs) = List.length xs
 let rec recursive_no_field_repeats j = 
   let objects (_,v) = v in
   let arrays x = x (* id *) in
-  let rec aux f xs = (* List.fold_left (&&) true (List.map (recursive_no_field_repeats % f) xs) *)
+  let rec aux f xs = (* List.fold_left (&&) true (List.map (recursive_no_field_repeats . f) xs) *)
     match xs with
     | [] -> true
     | x :: xs -> recursive_no_field_repeats (f x) && aux f xs
@@ -182,8 +182,10 @@ let rec filter_access_path_value (fs, v, js) =
   match js with 
   | [] -> [] 
   | j :: js -> match dots (j, fs) with 
-    | Some (String s) -> if s = v then j :: filter_access_path_value (fs, v, js) else []
-    | _ -> filter_access_path_value (fs, v, js)
+    | Some (String s) -> if s = v then 
+      j :: filter_access_path_value (fs, v, js) else 
+      filter_access_path_value (fs, v, js)
+    | _ -> filter_access_path_value (fs, v, js) (* much repetition... *)
 
 (* Types for use in problems 17-20. *)
 type rect = { min_latitude: float; max_latitude: float;
@@ -275,11 +277,9 @@ let complete_bus_positions_list =
   | Some (Array xs) -> xs
   | _ -> failwith "complete_bus_positions_list"
 
-exception Unimplemented
-
-let route_histogram     = Unimplemented
-let top_three_routes    = Unimplemented
-let buses_in_ud         = Unimplemented
-let ud_route_histogram  = Unimplemented
-let top_three_ud_routes = Unimplemented
-let all_fourty_fours    = Unimplemented
+let route_histogram     = histogram_for_access_path (["vehicle"; "trip"; "route_num"], complete_bus_positions_list)
+let top_three_routes    = firsts (take (3, route_histogram))
+let buses_in_ud         = filter_access_path_in_rect (["vehicle"; "position"], u_district, complete_bus_positions_list)
+let ud_route_histogram  = histogram_for_access_path (["vehicle"; "trip"; "route_num"], buses_in_ud)
+let top_three_ud_routes = firsts (take (3, ud_route_histogram))
+let all_fourty_fours    = filter_access_path_value (["vehicle"; "trip"; "route_num"], "44", complete_bus_positions_list)
