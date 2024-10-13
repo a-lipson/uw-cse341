@@ -93,12 +93,12 @@ let test_two_string_of_date = string_of_date (31,12,1999) = "December-31-1999"
 (* how many elements starting can sum to less than the sum param, 
  * assume all positive, assume sum of list is greater than sum param *)
 let number_before_reaching_sum ((sum: int), (lst: int list)) : int = 
-  let rec aux max curr n lst = 
-    if lst = [] then n-1 else
-      let next = curr + List.hd lst in 
-      if max <= next then n else
-        aux max next (n + 1) (List.tl lst)
-  in aux sum 0 0 lst
+  let rec aux acc n l =
+    match l with
+    | [] -> n - 1
+    | x :: xs -> if acc + x >= sum then n else
+    aux (acc + x) (n + 1) xs
+  in aux 0 0 lst
 
 
 let test_none_number_before_reaching_sum = number_before_reaching_sum (0,[0;1;2;3]) = 0
