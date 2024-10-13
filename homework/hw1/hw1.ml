@@ -39,7 +39,7 @@ let test_multiple_number_in_month = number_in_month ([(1,1,2000);(2,1,2000)],1) 
 (* 3 *)
 (* how many dates are in the given months, assume no duplicate months *)
 let rec number_in_months ((dates: (int * int * int) list), (months: int list)) : int = 
-  if dates = [] || months = [] then 0 else 
+  if months = [] then 0 else 
     number_in_month (dates, List.hd months) + number_in_months (dates, List.tl months)
 
 let test_empty_number_in_months = number_in_months ([],[1]) = 0
