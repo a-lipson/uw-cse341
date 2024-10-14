@@ -128,9 +128,9 @@ let%test "consume_string_literal_test" = consume_string_literal (char_list_of_st
 
 let%test "consume_keyword_test" = consume_keyword (char_list_of_string "false foo") = (FalseTok, [' '; 'f'; 'o'; 'o'])
 
-(* let%test "testC3" = tokenize_char_list (char_list_of_string "{ \"foo\" : 3.14, \"bar\" : [true, false] }")
+let%test "tokenize_char_list_test" = tokenize_char_list (char_list_of_string "{ \"foo\" : 3.14, \"bar\" : [true, false] }")
              = [LBrace; StringLit "foo"; Colon; NumLit "3.14"; Comma; StringLit "bar";
-                Colon; LBracket; TrueTok; Comma; FalseTok; RBracket; RBrace] *)
+                Colon; LBracket; TrueTok; Comma; FalseTok; RBracket; RBrace]
 
 (* let%test "testC5" = parse_string [StringLit "foo"; FalseTok] = ("foo", [FalseTok]) *)
 
