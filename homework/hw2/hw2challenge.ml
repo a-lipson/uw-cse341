@@ -191,7 +191,7 @@ let consume_keyword cs =
   let keyword_tokens = [("true", TrueTok); ("false", FalseTok); ("null", NullTok)] in
   let rec consumer cs acc = 
     match cs with 
-    | [] -> (acc, cs) (* throw lexical_error? *)
+    | [] -> (acc, cs) (* throw lexical_error? could end json object with a keyword. *)
     | c :: cs -> if is_alpha c then 
       consumer cs (acc ^ char_to_string c) else 
       (acc, c::cs)
@@ -319,9 +319,15 @@ let tokenize_char_list cs =
   let rec go (cs,acc) =
     match cs with
       [] -> List.rev acc
-    | '\n' :: cs -> go (cs, acc)  (* ignore newlines *)
-    | '{'  :: cs -> go (cs, (LBrace :: acc))
     (* TODO, about 7 lines: several more cases here *)
+    | '\n' :: cs -> go (cs, acc)  (* ignore newlines *)
+    | ' '  :: cs -> go (cs, acc)  (* ignore whitespace *)
+    | '{'  :: cs -> go (cs, (LBrace   :: acc))
+    | '}'  :: cs -> go (cs, (RBrace   :: acc))
+    | '['  :: cs -> go (cs, (LBracket :: acc)) 
+    | ']'  :: cs -> go (cs, (RBracket :: acc)) 
+    | ','  :: cs -> go (cs, (Comma    :: acc)) 
+    | ':'  :: cs -> go (cs, (Colon    :: acc)) 
     | c :: cs ->
        if is_digit c || c = '-'
        then
@@ -330,6 +336,13 @@ let tokenize_char_list cs =
        else (* TODO, about 15 lines: check for string literals and keywords here 
                and call the corresponding consumer. otherwise, call lexical error
                as below. *)
+       if c = '"' then 
+         let (s, cs) = consume_string_literal (c :: cs) in 
+         go (cs, (StringLit s :: acc)) 
+       else if is_alpha c then 
+         let (k, cs) = consume_keyword (c :: cs) in
+         go (cs, (k :: acc))
+       else 
          lexical_error ("Unknown character " ^ char_to_string c)
   in
   go (cs, [])
