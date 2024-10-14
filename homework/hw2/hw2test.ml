@@ -132,9 +132,9 @@ let%test "tokenize_char_list_test" = tokenize_char_list (char_list_of_string "{ 
              = [LBrace; StringLit "foo"; Colon; NumLit "3.14"; Comma; StringLit "bar";
                 Colon; LBracket; TrueTok; Comma; FalseTok; RBracket; RBrace]
 
-(* let%test "testC5" = parse_string [StringLit "foo"; FalseTok] = ("foo", [FalseTok]) *)
+let%test "parse_string_test" = parse_string [StringLit "foo"; FalseTok] = ("foo", [FalseTok])
 
-(* let%test "testC6" = expect (Colon, [Colon; FalseTok]) = [FalseTok] *)
+let%test "expect_test" = expect (Colon, [Colon; FalseTok]) = [FalseTok]
 
 (* let%test "testC10" = parse_json (tokenize "{ \"foo\" : null, \"bar\" : [true, false] }")
               = (Object [("foo", Null); ("bar", Array [True; False])], []) *)

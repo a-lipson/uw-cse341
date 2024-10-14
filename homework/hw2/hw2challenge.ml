@@ -352,7 +352,8 @@ let tokenize_char_list cs =
 
    Hint: use char_list_of_string and tokenize_char_list *)
 let tokenize (s : string) : token list =
-  (* TODO, 1 line *) failwith "tokenize unimplemented"
+  (* tokenize_char_list (char_list_of_string s) *)
+  s |> char_list_of_string |> tokenize_char_list 
 
 
 (* The tokenizer produces a list of tokens, which we now need to
@@ -393,7 +394,9 @@ let syntax_error (ts, msg) =
    call `syntax_error` with the token list and an appropriate message.
 *)
 let parse_string (ts : token list) : string * token list =
-  (* TODO, about 3 lines *) failwith "parse_string unimplemented"
+  match ts with 
+  | (StringLit s) :: ts -> (s, ts)
+  | _ -> syntax_error (ts, "No string literal at start of token list.")
 
 (* It is often useful to consume a single token from the token list
    and throw it away, returning the rest of the tokens and throwing an
@@ -405,7 +408,10 @@ let parse_string (ts : token list) : string * token list =
    If the token is not there as expected, call syntax_error with an
    appropriate message. *)
 let expect (t, ts) = 
-  (* TODO, about 6 lines *) failwith "expect unimplemented"
+  match ts with 
+  | [] -> []
+  | t' :: ts -> if t = t' then ts else 
+    syntax_error (t' :: ts, "Excepted token was not found.")
 
 
 (* We're now ready to start writing a `parse_json` function, which
