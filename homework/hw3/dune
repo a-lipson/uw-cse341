@@ -1,0 +1,22 @@
+(library
+ (name hw3)
+ (modules hw3)
+ (libraries hw3types))
+
+(library
+ (name hw3test)
+ (modules hw3test)
+ (libraries hw3 hw3types)
+ (inline_tests)
+ (preprocess
+  (pps ppx_inline_test)))
+
+(library
+ (name hw3types)
+ (modules hw3types))
+
+(env
+ (dev
+  (flags
+   (:standard -warn-error -A -w -27 -w -39 -w -33 -w -26))))
+
