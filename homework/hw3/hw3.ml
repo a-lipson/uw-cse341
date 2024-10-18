@@ -14,83 +14,125 @@ open Hw3types
 
 (* #1 *)
 let rec search_exn xs n = 
-  failwith "Need to implement search_exn"
+  match xs with
+  | [] -> raise NotFound
+  | x :: xs' -> if x = n then 0 else 1 + search_exn xs' n
 
 (* #2 *)
 let search xs n = 
-  failwith "Need to implement search"
+  try let x = search_exn xs n in Some x
+  with NotFound -> None 
 
 (* #3 *)
 let rec add n m = 
-  failwith "Need to implement add"
+  match n with 
+  | Zero -> m 
+  | (Succ n) -> add n (Succ m)
 
-let to_int n = 
-  failwith "Need to implement to_int"
+let to_int n =
+  let rec aux x acc = 
+    match x with 
+    | Zero -> acc 
+    | Succ x -> aux x (acc+1)
+  in aux n 0
 
 let from_int n = 
-  failwith "Need to implement from_int"
+  if n < 0 then raise NegativeInput else
+  let rec aux x acc = 
+    match x with 
+    | 0 -> acc
+    | x -> aux (x-1) (Succ acc)
+  in aux n Zero
 
 (* #4 *)
+(* assume strings non empty *)
 let only_lowercase =
-  failwith "Need to implement only_lowercase"
+  List.filter (fun s -> Char.lowercase_ascii s.[0] = s.[0])
 
 (* #5 *)
-let longest_string1 =
-  failwith "Need to implement longest_string1"
+let longest_string1 = 
+  List.fold_left (fun s s' -> if String.length s' > String.length s then s' else s) ""
 
 (* #6 *)
 let longest_string2 =
-  failwith "Need to implement longest_string2"
+  List.fold_left (fun s s' -> if String.length s' >= String.length s then s' else s) ""
 
 (* #7 *)
 let longest_string_helper f =
-  failwith "Need to implement longest_string_helper"
+  List.fold_left (fun s s' -> if f s s' then s' else s) ""
 
 let longest_string3 =
-  failwith "Need to implement longest_string3"
+  longest_string_helper (fun s1 s2 -> String.length s2 > String.length s1)
 
 let longest_string4 =
-    failwith "Need to implement longest_string4"
-  
+  longest_string_helper (fun s1 s2 -> String.length s2 >= String.length s1)
+
 (* #8 *)
-let longest_lowercase =
-  failwith "Need to implement longest_lowercase"
+let longest_lowercase = longest_string1 % only_lowercase
 
 (* #9 *)
-let caps_no_X_string =
-  failwith "Need to implement caps_no_X_string"
+let caps_no_X_string = 
+  String.concat "" 
+  % String.split_on_char 'X' 
+  % String.uppercase_ascii  
 
 (* #10 *)
 let rec first_answer f xs = 
-  failwith "Need to implement first_answer"
+  match xs with 
+  | [] -> raise NoAnswer
+  | x :: xs -> 
+    match f x with 
+    | Some v -> v 
+    | None -> first_answer f xs 
 
 (* #11 *)
 let all_answers f xs = 
-  failwith "Need to implement all_answers"
+  List.fold_left
+    (fun acc x -> Option.bind acc 
+      (fun lst -> Option.map ((@) lst) (f x)))
+    (Some []) xs
 
 (* #12 *)
-let count_wildcards =
-  failwith "Need to implement count_wildcards"
+let count_wildcards = g (fun _ -> 1) (fun _ -> 0) 
 
-let count_wild_and_variable_lengths =
-  failwith "Need to implement count_wild_and_variable_lengths"
+let count_wild_and_variable_lengths = g (fun _ -> 1) String.length
 
-let count_a_var s = 
-  failwith "Need to implement count_a_var"
+let count_a_var s = g (fun _ -> 0) (fun v -> if s = v then 1 else 0)
 
 (* #13 *)
-let check_pat pat = 
-  failwith "Need to implement check_pat"
+let check_pat pat =
+  let rec has_no_repeats xs =
+    match xs with 
+    | [] -> true 
+    | x :: xs -> 
+        if List.mem x xs then false
+        else has_no_repeats xs
+  in 
+  let rec get_var_names acc p =
+    match p with 
+    | VariableP x -> x :: acc
+    | ConstructorP (_,p) -> get_var_names acc p
+    | TupleP ps -> List.fold_left get_var_names acc ps
+    | _ -> acc 
+  in 
+  has_no_repeats (get_var_names [] pat)
+  (* let has_repeats xs =  *)
+  (*   List.exists (fun x -> List.length (List.filter ((=) x) xs) > 1) xs *)
+  (* in  *)
+
 
 (* #14 *)
 let rec matches v pat = 
-  failwith "Need to implement matches"
+  match pat with 
+  | VariableP x -> 
+  | TupleP ps -> all_answers 
+  | WildcardP -> Some []
 
 (* #15 *)
 let first_match v pats = 
-  failwith "Need to implement first_match"
+   "Need to implement first_match"
 
 (* optional challenge problem  *)
 
 let typecheck_patterns cons pats = 
-  failwith "Need to implement typecheck_patterns"
+   "Need to implement typecheck_patterns"
