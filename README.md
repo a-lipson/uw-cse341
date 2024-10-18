@@ -1,3 +1,3 @@
 # CSE 341 2024 Autumn
 
-This repo contains homework starter code as well as code from lecture and section.
+this repo contains my solutions to the homework 
