@@ -100,5 +100,31 @@ let%test "check_pat one" = check_pat (VariableP "var") = true
 let%test "check_pat some" = check_pat (TupleP [ConstructorP ("var", VariableP "val"); VariableP "var"]) = true
 let%test "check_pat bad" = check_pat (TupleP [ConstructorP ("var", VariableP "var"); VariableP "var"]) = false
 
+let%test "matches simple" = matches Unit UnitP = Some []
+let%test "matches wild" = matches (Tuple [Unit; Unit]) WildcardP = Some []
+let%test "matches one" = matches (Constant 1) (VariableP "var") = Some [("var", Constant 1)]
+let%test "matches bad" = matches (Constant 1) (ConstructorP ("var", UnitP)) = None
+let%test "matches some" = matches 
+        (Tuple [Constructor ("var", Unit); (Constant 1)]) 
+        (TupleP [ConstructorP ("var", VariableP "var"); ConstantP 1 ])
+        = Some [("var", Unit)]
 
+
+let%test "first_match simple" = first_match Unit [UnitP] = Some []
+let%test "first_match none" = first_match Unit [ConstantP 1] = None
+let%test "first_match empty" = first_match Unit [] = None
+let%test "first_match some" = first_match (Constant 1) [UnitP; ConstructorP ("var", UnitP); VariableP "var"] = Some [("var", Constant 1)]
+
+(* challenge *)
+
+let%test "typecheck_patterns none" = typecheck_patterns [] [] = None
+let%test "typecheck_patterns no cons one" = typecheck_patterns [] 
+        [TupleP [VariableP "x"; VariableP "y"]; TupleP [WildcardP; WildcardP]]
+        = Some (TupleT [AnythingT; AnythingT])
+let%test "typecheck_patterns no cons two" = typecheck_patterns [] 
+        [TupleP [WildcardP; WildcardP]; TupleP [WildcardP; TupleP [WildcardP; WildcardP]]
+        = Some (TupleT [AnythingT; TupleT[AnythingT; AnythingT]])
+let%test "typecheck_patterns cons simple" = typecheck_patterns [("n","a",UnitP)]
+        [ConstructorP ("n", UnitP)]
+        = Some (VariantT "a")
 

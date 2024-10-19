@@ -59,13 +59,15 @@ let longest_string2 =
 
 (* #7 *)
 let longest_string_helper f =
-  List.fold_left (fun s s' -> if f s s' then s' else s) ""
+  List.fold_left (fun s s' -> if f (String.length s') (String.length s) then s' else s) ""
+
+let test = longest_string_helper
 
 let longest_string3 =
-  longest_string_helper (fun s1 s2 -> String.length s2 > String.length s1)
+  longest_string_helper (fun s1 s2 -> s1 > s2)
 
 let longest_string4 =
-  longest_string_helper (fun s1 s2 -> String.length s2 >= String.length s1)
+  longest_string_helper (fun s1 s2 -> s1 >= s2)
 
 (* #8 *)
 let longest_lowercase = longest_string1 % only_lowercase
@@ -123,16 +125,98 @@ let check_pat pat =
 
 (* #14 *)
 let rec matches v pat = 
-  match pat with 
-  | VariableP x -> 
-  | TupleP ps -> all_answers 
-  | WildcardP -> Some []
+  let uncurry f (x, y) = f x y in 
+  match pat, v with 
+  | VariableP s, _ -> Some [(s, v)]
+  | ConstantP x, Constant x' -> 
+    if x = x' then Some [] else None
+  | UnitP, Unit -> Some []
+  | WildcardP, _ -> Some []
+  | TupleP ps, Tuple vs -> 
+    if List.length ps = List.length vs then 
+      all_answers (uncurry matches) (List.combine vs ps)
+    else None
+  | ConstructorP (s,p), Constructor (s',v) -> 
+    if s = s' then matches v p else None
+  | _, _ -> None
 
 (* #15 *)
 let first_match v pats = 
-   "Need to implement first_match"
+  try let m = first_answer (matches v) pats in Some m
+  with NoAnswer -> None
+
 
 (* optional challenge problem  *)
 
-let typecheck_patterns cons pats = 
-   "Need to implement typecheck_patterns"
+(* typecheckPatterns :: [(String, String, Typ)] -> [Pattern] -> Maybe Typ*)
+(* cons provides variant types and their constructors *)
+(* assume cons all have different constructor names (first field) *)
+let typecheck_patterns cons pats =
+  let rec is_valid_pattern t p = 
+    match p, t with 
+    | UnitP, Some UnitT -> Some UnitT
+    | WildcardP, Some AnythingT -> Some AnythingT
+    | TupleP ps, Some AnythingT -> Some AnythingT
+    | WildcardP, Some TupleT ts -> Some (TupleT ts)
+    | _, _ -> None
+  in 
+  List.fold_left (is_valid_pattern) (Some AnythingT) pats
+
+  (* let match_typ t t' =  *)
+  (*   if t = t' then t else  *)
+  (*   match t, t' with  *)
+  (*   | TupleT ts, AnythingT -> TupleT ts  *)
+  (*   | AnythingT, TupleT ts -> TupleT ts  *)
+  (*   | _, _ -> AnythingT *)
+  (* in *)
+  (* let rec typ_of_pattern = function  *)
+  (*   | WildcardP -> Some AnythingT *)
+  (*   | VariableP _ -> Some AnythingT *)
+  (*   | UnitP -> Some UnitT *)
+  (*   | ConstantP _ -> Some IntT *)
+  (*   | TupleP ps -> Option.map (fun ts -> TupleT ts) (List.map typ_of_pattern ps) *)
+  (*       (* Some (TupleT (List.map typ_of_pattern ps)) *) *)
+  (*   | ConstructorP (s,p) -> validate_constructor (s,p) *)
+  (* in  *)
+  (* let validate_constructor (s,p) =  *)
+  (*   try  *)
+  (*     (let (_,v,_) = List.find  *)
+  (*       (fun (n,_,t) -> s = n &&  *)
+  (*         Option.map (match_typ t) (typ_of_pattern p) = Some t) cons  *)
+  (*     in Some (VariantT v)) *)
+  (*   with Not_found -> None *)
+  (* in List.fold_left (Option.map match_typ) (List.map typ_of_pattern ps) *)
+
+  (* let rec typecheck_constructor (s, p) = *)
+  (*   let c = try (* could have used first_answer instead, but lib func is more idiomatic?*) *)
+  (*     Some (List.find  *)
+  (*       (fun (n, v, t) -> s = n &&  *)
+  (*       (* cons type captures pattern type*)  *)
+  (*       true)  *)
+  (*       cons) *)
+  (*   with Not_found -> None *)
+  (*   in Option.map (fun (n,v,t) -> VariantT v) c *)
+  (* in *)
+  (* let rec typecheck_pattern p =  *)
+  (*   match p with  *)
+  (*   | WildcardP -> Some AnythingT *)
+  (*   | UnitP -> Some UnitT *)
+  (*   | ConstantP _ -> Some IntT *)
+  (*   | ConstructorP (s,p) -> typecheck_constructor (s,p) *)
+  (*   | TupleP ps -> ( *)
+  (*     match all_answers typecheck_pattern ps with  *)
+  (*     | Some ts -> Some TupleT ts *)
+  (*     | None -> None) *)
+  (*   | _ -> None *)
+  (* in  *)
+  (* let rec generalize_patterns ps a =  *)
+  (*   List.fold_left  *)
+  (*     (fun p a ->  *)
+  (*       match p, a with  *)
+  (*       | WildcardP, TupleP ps -> TupleP generalize_patterns ps a *)
+  (*       | WildcardP, x -> AnythingT *)
+  (*       | VariableP _, x -> AnythingT *)
+  (*       | UnitP, UnitP -> UnitT *)
+  (*     )  *)
+  (*     a *)
+
