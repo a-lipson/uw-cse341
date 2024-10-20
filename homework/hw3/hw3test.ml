@@ -117,14 +117,16 @@ let%test "first_match some" = first_match (Constant 1) [UnitP; ConstructorP ("va
 
 (* challenge *)
 
-let%test "typecheck_patterns none" = typecheck_patterns [] [] = None
+let%test "typecheck_patterns none" = typecheck_patterns [] [] = Some AnythingT
 let%test "typecheck_patterns no cons one" = typecheck_patterns [] 
         [TupleP [VariableP "x"; VariableP "y"]; TupleP [WildcardP; WildcardP]]
         = Some (TupleT [AnythingT; AnythingT])
+
 let%test "typecheck_patterns no cons two" = typecheck_patterns [] 
-        [TupleP [WildcardP; WildcardP]; TupleP [WildcardP; TupleP [WildcardP; WildcardP]]
+        [TupleP [WildcardP; WildcardP]; TupleP [WildcardP; TupleP [WildcardP; WildcardP]]]
         = Some (TupleT [AnythingT; TupleT[AnythingT; AnythingT]])
-let%test "typecheck_patterns cons simple" = typecheck_patterns [("n","a",UnitP)]
+
+let%test "typecheck_patterns cons simple" = typecheck_patterns [("n","a", UnitT)]
         [ConstructorP ("n", UnitP)]
         = Some (VariantT "a")
 

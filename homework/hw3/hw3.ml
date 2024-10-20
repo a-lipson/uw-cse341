@@ -151,72 +151,35 @@ let first_match v pats =
 (* typecheckPatterns :: [(String, String, Typ)] -> [Pattern] -> Maybe Typ*)
 (* cons provides variant types and their constructors *)
 (* assume cons all have different constructor names (first field) *)
-let typecheck_patterns cons pats =
-  let rec is_valid_pattern t p = 
-    match p, t with 
-    | UnitP, Some UnitT -> Some UnitT
-    | WildcardP, Some AnythingT -> Some AnythingT
-    | TupleP ps, Some AnythingT -> Some AnythingT
-    | WildcardP, Some TupleT ts -> Some (TupleT ts)
-    | _, _ -> None
-  in 
-  List.fold_left (is_valid_pattern) (Some AnythingT) pats
-
-  (* let match_typ t t' =  *)
-  (*   if t = t' then t else  *)
-  (*   match t, t' with  *)
-  (*   | TupleT ts, AnythingT -> TupleT ts  *)
-  (*   | AnythingT, TupleT ts -> TupleT ts  *)
-  (*   | _, _ -> AnythingT *)
-  (* in *)
-  (* let rec typ_of_pattern = function  *)
-  (*   | WildcardP -> Some AnythingT *)
-  (*   | VariableP _ -> Some AnythingT *)
-  (*   | UnitP -> Some UnitT *)
-  (*   | ConstantP _ -> Some IntT *)
-  (*   | TupleP ps -> Option.map (fun ts -> TupleT ts) (List.map typ_of_pattern ps) *)
-  (*       (* Some (TupleT (List.map typ_of_pattern ps)) *) *)
-  (*   | ConstructorP (s,p) -> validate_constructor (s,p) *)
-  (* in  *)
-  (* let validate_constructor (s,p) =  *)
-  (*   try  *)
-  (*     (let (_,v,_) = List.find  *)
-  (*       (fun (n,_,t) -> s = n &&  *)
-  (*         Option.map (match_typ t) (typ_of_pattern p) = Some t) cons  *)
-  (*     in Some (VariantT v)) *)
-  (*   with Not_found -> None *)
-  (* in List.fold_left (Option.map match_typ) (List.map typ_of_pattern ps) *)
-
-  (* let rec typecheck_constructor (s, p) = *)
-  (*   let c = try (* could have used first_answer instead, but lib func is more idiomatic?*) *)
-  (*     Some (List.find  *)
-  (*       (fun (n, v, t) -> s = n &&  *)
-  (*       (* cons type captures pattern type*)  *)
-  (*       true)  *)
-  (*       cons) *)
-  (*   with Not_found -> None *)
-  (*   in Option.map (fun (n,v,t) -> VariantT v) c *)
-  (* in *)
-  (* let rec typecheck_pattern p =  *)
-  (*   match p with  *)
-  (*   | WildcardP -> Some AnythingT *)
-  (*   | UnitP -> Some UnitT *)
-  (*   | ConstantP _ -> Some IntT *)
-  (*   | ConstructorP (s,p) -> typecheck_constructor (s,p) *)
-  (*   | TupleP ps -> ( *)
-  (*     match all_answers typecheck_pattern ps with  *)
-  (*     | Some ts -> Some TupleT ts *)
-  (*     | None -> None) *)
-  (*   | _ -> None *)
-  (* in  *)
-  (* let rec generalize_patterns ps a =  *)
-  (*   List.fold_left  *)
-  (*     (fun p a ->  *)
-  (*       match p, a with  *)
-  (*       | WildcardP, TupleP ps -> TupleP generalize_patterns ps a *)
-  (*       | WildcardP, x -> AnythingT *)
-  (*       | VariableP _, x -> AnythingT *)
-  (*       | UnitP, UnitP -> UnitT *)
-  (*     )  *)
-  (*     a *)
+let typecheck_patterns cons pats = 
+  let base_t = Some AnythingT in 
+  let rec sequence l = 
+    if List.for_all Option.is_some l then 
+      Some (List.map Option.get l)
+    else None
+  in
+  let rec match_pattern t p =
+  match t, p with
+  | _, WildcardP -> t
+  | _, VariableP _ -> t
+  | Some UnitT, UnitP -> base_t
+  | Some IntT, ConstantP _ -> base_t
+  (* | Some AnythingT, _ -> Some AnythingT *)
+  | Some AnythingT, TupleP ps -> 
+      List.map (match_pattern base_t) ps
+      |> sequence
+      |> Option.map ((fun x -> TupleT x) % List.rev)
+  | Some TupleT ts, TupleP ps -> 
+    if List.length ps = List.length ts then
+      List.map2 match_pattern (List.map Option.some ts) ps
+      |> sequence 
+      |> Option.map (fun x -> TupleT x)
+    else None
+  | _, ConstructorP (n, p) ->
+    List.find_opt (fun (n', _, _) -> n' = n) cons
+    |> Fun.flip Option.bind (fun (_, v, t) -> 
+      match_pattern (Some t) p 
+      |> Option.map (fun _ -> VariantT v))
+  | _, _ -> None
+  in List.fold_left match_pattern base_t pats
 
