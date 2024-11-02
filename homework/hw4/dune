@@ -1,0 +1,20 @@
+(library
+ (name hw4)
+ (modules hw4)
+ (libraries hw4types))
+
+(library
+  (name hw4test)
+  (modules hw4test )
+  (libraries hw4 hw4types)
+  (inline_tests)
+  (preprocess 
+    (pps ppx_inline_test)))
+
+(library
+ (name hw4types)
+ (modules hw4types))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A -w -27 -w -39 -w -33 -w -26))))
