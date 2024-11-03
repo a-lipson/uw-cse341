@@ -25,8 +25,8 @@ let rec stream_map f (Stream s) =
 
 (* helper stream *)
 let nats = 
-  let rec go n = (n, Stream (fun () -> go (n + 1)))
-  in Stream (fun () -> go 0)
+  let rec aux n = (n, Stream (fun () -> aux (n + 1)))
+  in Stream (fun () -> aux 0)
 
 
 let funny_number_stream : int stream =
@@ -53,7 +53,17 @@ let cycle_lists xs ys =
   (*                   Stream (fun () -> next (n+1))) *)
   (* in Stream (fun () -> next 0)  *)
 
-let array_assoc key a = failwith "array_assoc: not implemented"
+(* array_assoc : 'a -> ('a * 'b) option array -> 'b option*)
+let array_assoc key a =
+  let len = Array.length a in 
+  let rec aux i = 
+    if i = len then None 
+    else match a.(i) with 
+      | Some x -> 
+          if fst x = key then Some (snd x) 
+          else aux (i+1)
+      | None -> aux (i+1)
+  in aux 0
 
 let caching_assoc xs n = failwith "caching_assoc: not implemented"
 

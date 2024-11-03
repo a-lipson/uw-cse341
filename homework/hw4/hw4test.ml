@@ -49,3 +49,9 @@ let%test _ = stream_first_k_such_that
   (fun x -> true) 8 (cycle_lists [1;2;3] ["a";"b"]) =
   [(1, "a"); (2, "b"); (3, "a"); (1, "b"); (2, "a"); (3, "b"); (1, "a"); (2, "b")]
 
+(* 9 *)
+let a = [|Some ("a",1); Some ("b",2); None; Some ("c",3)|]
+let%test _ = array_assoc "c" a = Some 3
+let%test _ = array_assoc "d" a = None
+
+
