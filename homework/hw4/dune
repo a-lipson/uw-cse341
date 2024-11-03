@@ -1,19 +1,13 @@
 (library
- (name hw4)
- (modules hw4)
- (libraries hw4types))
+ (name hw4lib)
+ (modules hw4types hw4))
 
 (library
   (name hw4test)
-  (modules hw4test )
-  (libraries hw4 hw4types)
+  (libraries hw4lib)
   (inline_tests)
-  (preprocess 
-    (pps ppx_inline_test)))
-
-(library
- (name hw4types)
- (modules hw4types))
+  (preprocess (pps ppx_inline_test))
+  (modules hw4test))
 
 (env
   (dev
