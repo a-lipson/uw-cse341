@@ -14,10 +14,10 @@ let list_nth_mod xs n =
 
 (* assume k non-negative *)
 let rec stream_first_k_such_that p k (Stream t) =
-  if k = 0 then [] else
-  let h, r = t () in 
-  if p h then h :: stream_first_k_such_that p (k-1) r 
-  else stream_first_k_such_that p k r
+  if k = 0 then [] 
+  else let h, r = t () in 
+    if p h then h :: stream_first_k_such_that p (k-1) r 
+    else stream_first_k_such_that p k r
 
 let rec stream_map f (Stream s) = 
   let (x, s') = s () in 
@@ -53,19 +53,34 @@ let cycle_lists xs ys =
   (*                   Stream (fun () -> next (n+1))) *)
   (* in Stream (fun () -> next 0)  *)
 
-(* array_assoc : 'a -> ('a * 'b) option array -> 'b option*)
+(* array_assoc : 'a -> ('a * 'b) option array -> 'b option *)
 let array_assoc key a =
   let len = Array.length a in 
   let rec aux i = 
-    if i = len then None 
-    else match a.(i) with 
-      | Some x -> 
-          if fst x = key then Some (snd x) 
-          else aux (i+1)
-      | None -> aux (i+1)
+    if i >= len then None 
+    else match a.(i) with
+    | Some (k, v) -> 
+        if k = key then Some v 
+        else aux (i + 1)
+    | None -> aux (i + 1)
   in aux 0
 
-let caching_assoc xs n = failwith "caching_assoc: not implemented"
+(* assume n positive *)
+(* caching_assoc : ('a * 'b) list -> int -> 'a -> 'b option *)
+let caching_assoc xs n = 
+  fun k ->  
+    let i = ref 0 in
+    let c = Array.make n None in 
+      match array_assoc k c with 
+      | Some v -> Some v 
+      | None -> 
+          match List.assoc_opt k xs with 
+          | Some v -> 
+              c.(!i) <- Some (k, v);
+              i := (!i + 1) mod n;
+              Some v
+          | None -> None
+
 
 let tokenize s = failwith "tokenize: not implemented"
 

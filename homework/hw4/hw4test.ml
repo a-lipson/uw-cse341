@@ -1,3 +1,4 @@
+open Hw4lib 
 open Hw4
 open Hw4types
 
@@ -54,4 +55,8 @@ let a = [|Some ("a",1); Some ("b",2); None; Some ("c",3)|]
 let%test _ = array_assoc "c" a = Some 3
 let%test _ = array_assoc "d" a = None
 
+(* 10 *)
+let l = [("a",1); ("b",2); ("c",3)]
+let%test _ = (caching_assoc l 3) "c" = Some 3
+let%test _ = (caching_assoc l 3) "d" = None
 
