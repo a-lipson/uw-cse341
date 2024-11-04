@@ -60,3 +60,30 @@ let l = [("a",1); ("b",2); ("c",3)]
 let%test _ = (caching_assoc l 3) "c" = Some 3
 let%test _ = (caching_assoc l 3) "d" = None
 
+(* 11 *)
+let%test _ = tokenize "1 1 +" = [Literal 1; Literal 1; Plus]
+let%test _ = tokenize "1 + - * ." = [Literal 1; Plus; Minus; Mul; Dot]
+let%test _ = tokenize ". ." = [Dot; Dot]
+let%test _ = try 
+  let _ = tokenize "1 + x" in false with 
+  | TrefoilError _ -> true
+  | _ -> false
+
+(* 12 *)
+let%test _ = tokenize "1 1 +"     |> interpret [] = [2]
+let%test _ = tokenize "1 1 -"     |> interpret [] = [0]
+let%test _ = tokenize "1 1 *"     |> interpret [] = [1]
+let%test _ = tokenize "1 ."       |> interpret [] = []
+let%test _ = tokenize "3 2 - 1 *" |> interpret [] = [1]
+let%test _ = try 
+  let _ = tokenize "1 +" |> interpret [] in false with 
+  | TrefoilError _ -> true 
+  | _ -> false
+let%test _ = try 
+  let _ = tokenize "." |> interpret [] in false with 
+  | TrefoilError _ -> true 
+  | _ -> false
+let%test _ = try 
+  let _ = tokenize ". ." |> interpret [2] in false with 
+  | TrefoilError _ -> true 
+  | _ -> false
