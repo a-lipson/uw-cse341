@@ -34,12 +34,12 @@ let rec interpret_expression dynenv e =
   | Mul (e1, e2) -> Int  (int_binop ( * ) e1 e2 "Mul")
   | Eq  (e1, e2) -> Bool (int_binop ( = ) e1 e2 "Eq" )
   | IsNil e -> begin
-      match e with 
+      match interpret_expression dynenv e with 
       | Nil -> Bool true 
       | _   -> Bool false 
   end
   | IsCons e -> begin 
-      match e with 
+      match interpret_expression dynenv e with 
       | Cons _ -> Bool true 
       | _      -> Bool false 
   end
