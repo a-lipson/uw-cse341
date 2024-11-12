@@ -12,6 +12,8 @@ let rec lookup dynenv name =
      then Some value
      else lookup dynenv name
 
+(* let extend (x, v) e = (x, v) :: e *)
+
 (* expression -> value *)
 let rec interpret_expression dynenv e =
   let int_binop f le re name = 

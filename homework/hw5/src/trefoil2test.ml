@@ -149,11 +149,15 @@ let%test "failing test binding" = runtime_error_test (ibs0 % bsos) "(define x 3)
 let%test "intepret car" = Ast.Car (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Int 1
 let%test "intepret cdr" = Ast.Cdr (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Bool true
 
-let%test "intepret car with let" = Ast.Let ("x", Ast.Int 1, Ast.Car (Ast.Cons (Ast.Var "x", Ast.Bool true))) |> ie0 = Ast.Int 1
+let%test "intepret car nested" = Ast.Let ("x", Ast.Int 1, Ast.Car (Ast.Cons (Ast.Var "x", Ast.Bool true))) |> ie0 = Ast.Int 1
+let%test "intepret car nested" = Ast.Car (Ast.Cons (Ast.Let ("x", Ast.Int 1, Ast.Var "x"), Ast.Nil)) |> ie0 = Ast.Int 1
+
 
 let%test "parsing cons?" = Ast.IsCons (Ast.Cons (Ast.Int 1, Ast.Bool true)) = eos "(cons? (cons 1 true))"
 let%test "intepret cons?" = Ast.IsCons (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Bool true
 let%test "intepret cons?" = Ast.IsCons (Ast.Bool true)                       |> ie0 = Ast.Bool false
+
+let%test "intepret cons? nested" = Ast.IsCons (Ast.Cdr (Ast.Cons (Ast.Nil, Ast.Cons (Ast.Nil, Ast.Nil)))) |> ie0 = Ast.Bool true
 
 let%test "cons? malformed" = ast_error_interp_test "(cons?)"
 let%test "cons? malformed" = ast_error_interp_test "(cons? ())"
@@ -164,14 +168,10 @@ let%test "parsing nil?" = Ast.IsNil Ast.Nil = eos "(nil? nil)"
 let%test "intepret nil?" = Ast.IsNil Ast.Nil         |> ie0 = Ast.Bool true
 let%test "intepret nil?" = Ast.IsNil (Ast.Bool true) |> ie0 = Ast.Bool false
 
+let%test "intepret nil? nested" = Ast.IsNil (Ast.Car (Ast.Cons (Ast.Nil, Ast.Int 1))) |> ie0 = Ast.Bool true
+
 let%test "nil? malformed" = ast_error_interp_test "(nil?)"
 let%test "nil? malformed" = ast_error_interp_test "(nil? ())"
 let%test "nil? malformed" = ast_error_interp_test "(nil? 1 2)"
 (* wrong type input not applicable, should return false *)
 
-let%test "intepret nil? nested" = Ast.IsNil (Ast.Car (Ast.Cons (Ast.Nil, Ast.Int 1))) |> ie0 = Ast.Bool true
-let%test "intepret cons? nested" = Ast.IsCons (Ast.Cdr (Ast.Cons (
-                                                          Ast.Nil, 
-                                                          Ast.Cons (
-                                                            Ast.Nil,
-                                                            Ast.Nil )))) |> ie0 = Ast.Bool true
