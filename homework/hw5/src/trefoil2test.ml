@@ -146,3 +146,21 @@ let%test_unit "simple test binding" =
 
 let%test "failing test binding" = runtime_error_test (ibs0 % bsos) "(define x 3) (test (= 2 x))"
 
+let%test "parsing cons?" = Ast.IsCons (Ast.Cons (Ast.Int 1, Ast.Bool true)) = eos "(cons? (cons 1 true))"
+let%test "intepret cons?" = Ast.IsCons (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Bool true
+let%test "intepret cons?" = Ast.IsCons (Ast.Bool true)                       |> ie0 = Ast.Bool false
+
+let%test "cons? malformed" = ast_error_interp_test "(cons?)"
+let%test "cons? malformed" = ast_error_interp_test "(cons? ())"
+let%test "cons? malformed" = ast_error_interp_test "(cons? 1 2)"
+(* wrong type input not applicable, should return false *)
+
+let%test "parsing nil?" = Ast.IsNil Ast.Nil = eos "(nil? nil)"
+let%test "intepret nil?" = Ast.IsNil Ast.Nil         |> ie0 = Ast.Bool true
+let%test "intepret nil?" = Ast.IsNil (Ast.Bool true) |> ie0 = Ast.Bool false
+
+let%test "nil? malformed" = ast_error_interp_test "(nil?)"
+let%test "nil? malformed" = ast_error_interp_test "(nil? ())"
+let%test "nil? malformed" = ast_error_interp_test "(nil? 1 2)"
+(* wrong type input not applicable, should return false *)
+
