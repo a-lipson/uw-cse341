@@ -25,7 +25,6 @@ let rec interpret_expression dynenv e =
   | Int  _ -> e
   | Bool _ -> e
   | Nil    -> e (* ? *) 
-  | Cons _ -> e (* ? *)
   | Var x  -> begin 
       match lookup dynenv x with
       | None -> raise (RuntimeError ("Unbound var " ^ x))
@@ -35,6 +34,10 @@ let rec interpret_expression dynenv e =
   | Sub (e1, e2) -> Int  (int_binop ( - ) e1 e2 "Sub")
   | Mul (e1, e2) -> Int  (int_binop ( * ) e1 e2 "Mul")
   | Eq  (e1, e2) -> Bool (int_binop ( = ) e1 e2 "Eq" )
+  | Cons (e1, e2) -> (* eagrly store evalued expressions *) 
+      let v1 = interpret_expression dynenv e1 in
+      let v2 = interpret_expression dynenv e2 in
+      Cons (v1, v2)
   | IsNil e -> begin
       match interpret_expression dynenv e with 
       | Nil -> Bool true 
@@ -47,12 +50,12 @@ let rec interpret_expression dynenv e =
   end
   | Car e -> begin
     match interpret_expression dynenv e with 
-    | Cons (l, _) -> interpret_expression dynenv l
+    | Cons (l, _) -> l (* interpret_expression dynenv l *)
     | _ -> raise (RuntimeError ("car not applied to cons expression " ^ string_of_expr e))
   end
   | Cdr e -> begin
     match interpret_expression dynenv e with 
-    | Cons (_, r) -> interpret_expression dynenv r
+    | Cons (_, r) -> r (* interpret_expression dynenv r *)
     | _ -> raise (RuntimeError ("cdr not applied to cons expression " ^ string_of_expr e))
   end
   | If  (pred, thn, els) -> begin
