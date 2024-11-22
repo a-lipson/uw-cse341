@@ -64,10 +64,12 @@ let rec interpret_expression dynenv e =
       | Bool false -> interpret_expression dynenv els
       | _          -> interpret_expression dynenv thn (* all other values are truthy,*)
   end
-  | Let ((x, e1) :: _, e2) -> 
-      let v = interpret_expression dynenv e1 in
-      interpret_expression ((x, v) :: dynenv) e2
-  (* | _ -> raise (RuntimeError (string_of_expr e)) *)
+  | Let (es, e) -> (* let bindings cannot refer to other variables actively bound in same let expr *)
+      let es' = List.map (fun e -> (fst e, interpret_expression dynenv (snd e))) es in
+      interpret_expression (es' @ dynenv) e
+  (* | Call (_,_) ->  *)
+  (* | Cond _ :: _ ->  *)
+  | _ -> raise (RuntimeError (string_of_expr e))
 
 (* extend dynamic environment with binding *)
 let interpret_binding dynenv b =
@@ -83,7 +85,11 @@ let interpret_binding dynenv b =
   | TestBinding e -> 
       match interpret_expression dynenv e with 
       | Bool true -> dynenv
-      | _ -> RuntimeError (string_of_expr e ^ "fails") |> raise 
+      | _ -> raise (RuntimeError (string_of_expr e ^ "fails"))
+  (* TODO: implement! *)
+  | FunctionBinding f -> 
+      match interpret_expression 
+      raise (RuntimeError "not yet implemented")
 
 (* the semantics of a whole program (sequence of bindings) *)
 let interpret_bindings (* dynenv bs *) =
