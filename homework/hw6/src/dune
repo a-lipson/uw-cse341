@@ -1,7 +1,8 @@
 (executable
  (name trefoil3)
  (libraries trefoil3lib)
- (modules trefoil3))
+ (modules trefoil3)
+ (modes byte exe))
 
 (library
  (name trefoil3lib)
@@ -20,5 +21,4 @@
 (env
  (dev
   (flags
-   (:standard -warn-error -A))))
-
+   (:standard -warn-error -A -g))))
