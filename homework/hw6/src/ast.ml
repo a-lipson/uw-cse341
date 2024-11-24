@@ -2,9 +2,6 @@ include Ast_types
 open Pst
 open Errors
 
-(* let fmap f (x, y) = (f x, f y) *)
-(* let (<$>) = fmap *)
-
 (* last stage of parser: converts pst to expr *)
 let rec expr_of_pst p =
   let raise_expect_args n info = 
@@ -34,7 +31,7 @@ let rec expr_of_pst p =
       match head, args with
       | Node _, _ -> raise_explain_pst "Expression forms must start with a symbol, but got " head
 
-      | Symbol "car"  , args -> op    "car"   (fun x   -> Car       x) args (* imagine if constructors were curried functions... *)
+      | Symbol "car"  , args -> op    "car"   (fun x   -> Car       x) args (* constructors should be functions! [^1] *)
       | Symbol "cdr"  , args -> op    "cdr"   (fun x   -> Cdr       x) args
       | Symbol "cons?", args -> op    "cons?" (fun x   -> IsCons    x) args
       | Symbol "nil?" , args -> op    "nil?"  (fun x   -> IsNil     x) args
@@ -58,15 +55,16 @@ let rec expr_of_pst p =
           in Let (bindings, expr_of_pst body)
       | Symbol "let"  , _ -> raise_expect_args 2 "let expression"
 
-      | Symbol "cond" , clauses ->  
+      | Symbol "cond", clauses ->  
           let pair_clause = function 
           | Node [pred; body] -> (expr_of_pst pred, expr_of_pst body)
           | p -> raise_explain_pst "Malformed clause in cond expression " p
           in Cond (List.map pair_clause clauses)
 
-      | Symbol f, [] ->  raise (AbstractSyntaxError "not implemented")
+      | Symbol f, args -> Call (f, List.map expr_of_pst args)
 
-      | Symbol s, _ -> raise (AbstractSyntaxError ("Unknown symbol " ^ s))
+
+(* ^1 tagging data is a transformation equivalent to placing a value into a functorial context. *)
 
 
 let expr_of_string s = s
