@@ -1,8 +1,9 @@
 include Ast_types
+open Pst
 open Errors
 
-let fmap f (x, y) = (f x, f y)
-let (<$>) = fmap
+(* let fmap f (x, y) = (f x, f y) *)
+(* let (<$>) = fmap *)
 
 (* last stage of parser: converts pst to expr *)
 let rec expr_of_pst p =
@@ -18,7 +19,7 @@ let rec expr_of_pst p =
     | _   -> raise_expect_args 2 ("operator " ^ sym)
 
   in match p with
-  | Pst.Symbol sym -> begin
+  | Symbol sym -> begin
      try Int (int_of_string sym) with
        Failure _ ->
        match sym with
@@ -28,58 +29,44 @@ let rec expr_of_pst p =
        | _       -> Var sym
     end
 
-  | Pst.Node [] -> raise (AbstractSyntaxError "Expected expression but got '()'")
-  | Pst.Node (head :: args) ->
+  | Node [] -> raise (AbstractSyntaxError "Expected expression but got '()'")
+  | Node (head :: args) ->
       match head, args with
-      | Pst.Node _, _ -> raise_explain_pst "Expression forms must start with a symbol, but got " head
+      | Node _, _ -> raise_explain_pst "Expression forms must start with a symbol, but got " head
 
-      | Pst.Symbol "car"  , args -> op    "car"   (fun x   -> Car       x) args (* imagine if constructors were curried functions... *)
-      | Pst.Symbol "cdr"  , args -> op    "cdr"   (fun x   -> Cdr       x) args
-      | Pst.Symbol "cons?", args -> op    "cons?" (fun x   -> IsCons    x) args
-      | Pst.Symbol "nil?" , args -> op    "nil?"  (fun x   -> IsNil     x) args
-      | Pst.Symbol "+"    , args -> binop "+"     (fun x y -> Add  (x, y)) args
-      | Pst.Symbol "-"    , args -> binop "-"     (fun x y -> Sub  (x, y)) args
-      | Pst.Symbol "*"    , args -> binop "*"     (fun x y -> Mul  (x, y)) args
-      | Pst.Symbol "="    , args -> binop "="     (fun x y -> Eq   (x, y)) args
-      | Pst.Symbol "cons" , args -> binop "cons"  (fun l r -> Cons (l, r)) args
+      | Symbol "car"  , args -> op    "car"   (fun x   -> Car       x) args (* imagine if constructors were curried functions... *)
+      | Symbol "cdr"  , args -> op    "cdr"   (fun x   -> Cdr       x) args
+      | Symbol "cons?", args -> op    "cons?" (fun x   -> IsCons    x) args
+      | Symbol "nil?" , args -> op    "nil?"  (fun x   -> IsNil     x) args
+      | Symbol "+"    , args -> binop "+"     (fun x y -> Add  (x, y)) args
+      | Symbol "-"    , args -> binop "-"     (fun x y -> Sub  (x, y)) args
+      | Symbol "*"    , args -> binop "*"     (fun x y -> Mul  (x, y)) args
+      | Symbol "="    , args -> binop "="     (fun x y -> Eq   (x, y)) args
+      | Symbol "cons" , args -> binop "cons"  (fun l r -> Cons (l, r)) args
 
-      | Pst.Symbol "if"   , [branch; thn; els] -> If (expr_of_pst branch, expr_of_pst thn, expr_of_pst els)
-      | Pst.Symbol "if"   , _                  -> raise_expect_args 3 "if expression" 
+      | Symbol "if"   , [branch; thn; els] -> If (expr_of_pst branch, expr_of_pst thn, expr_of_pst els)
+      | Symbol "if"   , _                  -> raise_expect_args 3 "if expression" 
 
-      | Pst.Symbol "let"  , [Pst.Node defs; body] -> 
+      | Symbol "let"  , [Node defs; body] -> 
           let bind_def seen = function
-          | Pst.Node [Pst.Symbol name; pst] -> 
+          | Node [Symbol name; pst] -> 
               if List.mem name seen 
               then raise_explain_pst ("Duplicate binding: " ^ name) p
               else (name :: seen, (name, expr_of_pst pst)) 
           | p -> raise_explain_pst "Malformed binding in let expression" p
           in let (_, bindings) = List.fold_left_map bind_def [] defs
           in Let (bindings, expr_of_pst body)
-          (* let bind = function *)
-          (*   | Pst.Node [Pst.Symbol name; pst] ->  *)
-          (*       (name, expr_of_pst pst) *)
-          (*   | p -> raise_explain_pst "Malformed binding in let expression" p *)
-          (* in let has_dups l = *)
-          (*   (* |> List.map fst  *) *)
-          (*   (* |> fun l -> (l, List.sort_uniq String.compare) *) *)
-          (*   (* |> <$> List.length  *) (* (<$>) fmap into pair functorial context *) *)
-          (*   (* |> uncurry (<>)  *) *)
-          (*   let sorted_unique = List.sort_uniq String.compare (List.map fst l) in *)
-          (*   List.length sorted_unique < List.length l *)
-          (* in let bindings = List.map bind defs in  *)
-          (* (* could catch duplicate error prior to parsing all pst defs *) *)
-          (* if has_dups bindings then raise_explain_pst "Duplicate binding in let expression" p *)
-          (* else Let (bindings, expr_of_pst body) *)
-      | Pst.Symbol "let"  , _ -> raise_expect_args 2 "let expression"
+      | Symbol "let"  , _ -> raise_expect_args 2 "let expression"
 
-      | Pst.Symbol "cond" , clauses ->  
-          let eval = function 
-            | Pst.Node [pred; body] -> (expr_of_pst pred, expr_of_pst body)
-            | p -> raise_explain_pst "Malformed clause in cond expression " p
-          in Cond (List.map eval clauses)
-      | Pst.Symbol f, [] ->  raise (AbstractSyntaxError "not implemented")
+      | Symbol "cond" , clauses ->  
+          let pair_clause = function 
+          | Node [pred; body] -> (expr_of_pst pred, expr_of_pst body)
+          | p -> raise_explain_pst "Malformed clause in cond expression " p
+          in Cond (List.map pair_clause clauses)
 
-      | Pst.Symbol s, _ -> raise (AbstractSyntaxError ("Unknown symbol " ^ s))
+      | Symbol f, [] ->  raise (AbstractSyntaxError "not implemented")
+
+      | Symbol s, _ -> raise (AbstractSyntaxError ("Unknown symbol " ^ s))
 
 
 let expr_of_string s = s
@@ -88,17 +75,23 @@ let expr_of_string s = s
 
 let binding_of_pst p =
   match p with
-  | Pst.Symbol _ -> TopLevelExpr (expr_of_pst p)
-  | Pst.Node [] -> raise (AbstractSyntaxError "Expected binding but got '()'")
-  | Pst.Node (head :: args) ->
+  | Symbol _ -> TopLevelExpr (expr_of_pst p)
+  | Node [] -> raise (AbstractSyntaxError "Expected binding but got '()'")
+  | Node (head :: args) ->
       match head, args with
-      | Pst.Symbol "define", [Pst.Symbol lhs_var; rhs] -> VarBinding (lhs_var, expr_of_pst rhs)
-      | Pst.Symbol "define", _ -> raise (AbstractSyntaxError("This definition is malformed " ^ Pst.string_of_pst p))
+      | Symbol "define", [Symbol name; value] -> VarBinding (name, expr_of_pst value)
+      | Symbol "define", [Node (Symbol name :: params); body] ->
+          let rec symbols_of_pst_list = function 
+          | [] -> [] 
+          | Pst.Symbol s :: ss -> s :: symbols_of_pst_list ss
+          | p :: _ -> raise (AbstractSyntaxError ("Expected function parameter to be a symbol but got " ^ string_of_pst p))
+          in FunctionBinding { name = name; param_names = symbols_of_pst_list params; body = expr_of_pst body }
+      | Symbol "define", _ -> raise (AbstractSyntaxError("This definition is malformed " ^ string_of_pst p))
 
-      | Pst.Symbol "test", [p'] -> TestBinding (expr_of_pst p')
-      | Pst.Symbol "test", _ -> AbstractSyntaxError ("This test is malformed " ^ Pst.string_of_pst p) |> raise 
+      | Symbol "test", [p'] -> TestBinding (expr_of_pst p')
+      | Symbol "test", _ -> AbstractSyntaxError ("This test is malformed " ^ string_of_pst p) |> raise 
 
-      | Pst.Node _, _ -> raise (AbstractSyntaxError("Expected binding to start with a symbol but got " ^ Pst.string_of_pst p))
+      | Node _, _ -> raise (AbstractSyntaxError("Expected binding to start with a symbol but got " ^ string_of_pst p))
       | _ -> TopLevelExpr (expr_of_pst p)
 
 
