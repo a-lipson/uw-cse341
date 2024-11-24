@@ -75,10 +75,16 @@ let rec interpret_expression dynenv expr : expr (* must be value subtype *) =
           | Bool false -> eval cs
           | _ -> interpret_expression dynenv body (* all other values are truthy *)
       in eval clauses 
-
-  (* | Call (_,_) ->  *)
-
-  | _ -> raise (RuntimeError (string_of_expr expr))
+  | Call (name, args) -> begin
+      match lookup dynenv name with (* callenv = current dynamic environment *)
+      | Some (FunctionEntry (f, defenv)) -> 
+          if List.length args <> List.length f.param_names 
+          then raise (RuntimeError ("Incorrect number of arguments supplied to function " ^ name));
+          let vals = List.map (fun v -> VariableEntry (interpret_expression dynenv v)) args 
+          in let extended_environment = (name, FunctionEntry (f, defenv)) :: (List.combine f.param_names vals) @ defenv 
+          in interpret_expression extended_environment f.body 
+      | _ -> raise (RuntimeError ("Unbound function " ^ name))
+      end
 
 (* extend dynamic environment with binding *)
 let interpret_binding dynenv b : dynamic_env =
