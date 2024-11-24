@@ -112,8 +112,7 @@ let ast_error_parse_test = ast_error_test eos
 let%test "parse let malformed" = ast_error_parse_test "(let ())"
 let%test "parse let malformed" = ast_error_parse_test "(let (x 1) ())"
 let%test "parse let malformed" = ast_error_parse_test "(let ((x 1)) )"
-
-let%test "parse let duplicate" = ast_error_parse_test "(let ((x 1) (x 1)) 1)"
+let%test "parse let malformed duplicate" = ast_error_parse_test "(let ((x 1) (x 1)) 1)"
 
 let%test "intepret let" = Ast.Int 4  = ie0 (eos "(let ((x 3)) (+ x 1))"                    )
 let%test "intepret let" = Ast.Int 2  = ie0 (eos "(let ((x 1)) (let ((x 2)) x))"            )
@@ -178,7 +177,6 @@ let%test "parse cond empty" = "(cond)" |> eos = Ast.Cond []
 let%test "parse cond malformed" = ast_error_parse_test "(cond ())"
 let%test "parse cond malformed" = ast_error_parse_test "(cond (true))"
 
-
 let%test "multi var let" = Ast.Int 7 = ie0 (eos "(let ((x 3) (y 4)) (+ x y))")
 let%test "no var let" = Ast.Int 0 = ie0 (eos "(let () 0)")
 let%test "let swap" = Ast.Int 1 = ie0 (eos "(let ((x 3) (y 4)) (let ((x y) (y x)) (- x y)))")
@@ -192,6 +190,12 @@ let%test "empty cond" = try ignore (ie0 (eos "(cond)")); false
 let%test "cond parsing malformed" =
   try ignore (eos "(cond true 0)"); false
   with AbstractSyntaxError _ -> true
+
+(* TODO: write interpret cond tests *)
+
+(* TODO: write parsing function bindings tests *)
+
+(* TODO: write parsing function call tests *)
 
 let%test "basic function" =
   let program =
