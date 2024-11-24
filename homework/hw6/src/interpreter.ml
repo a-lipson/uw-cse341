@@ -13,8 +13,6 @@ let rec lookup (dynenv : dynamic_env) name =
      then Some value
      else lookup dynenv name
 
-(* let extend (x, v) e = (x, v) :: e *)
-
 (* expression -> value *)
 let rec interpret_expression dynenv expr : expr (* must be value subtype *) =
   let int_binop f le re name = 
@@ -44,55 +42,38 @@ let rec interpret_expression dynenv expr : expr (* must be value subtype *) =
       match interpret_expression dynenv e with 
       | Nil -> Bool true 
       | _   -> Bool false 
-  end
+      end
   | IsCons e -> begin 
       match interpret_expression dynenv e with 
       | Cons _ -> Bool true 
       | _      -> Bool false 
-  end
+      end
   | Car e -> begin
-    match interpret_expression dynenv e with 
-    | Cons (l, _) -> l (* interpret_expression dynenv l *)
-    | _ -> raise (RuntimeError ("car not applied to cons expression " ^ string_of_expr e))
-  end
+      match interpret_expression dynenv e with 
+      | Cons (l, _) -> l (* interpret_expression dynenv l *)
+      | _ -> raise (RuntimeError ("car not applied to cons expression " ^ string_of_expr e))
+      end
   | Cdr e -> begin
-    match interpret_expression dynenv e with 
-    | Cons (_, r) -> r (* interpret_expression dynenv r *)
-    | _ -> raise (RuntimeError ("cdr not applied to cons expression " ^ string_of_expr e))
-  end
+      match interpret_expression dynenv e with 
+      | Cons (_, r) -> r (* interpret_expression dynenv r *)
+      | _ -> raise (RuntimeError ("cdr not applied to cons expression " ^ string_of_expr e))
+      end
   | If  (pred, thn, els) -> begin
       match interpret_expression dynenv pred with 
       | Bool false -> interpret_expression dynenv els
-      | _          -> interpret_expression dynenv thn (* all other values are truthy,*)
-  end
+      | _          -> interpret_expression dynenv thn (* all other values are truthy *)
+      end
   | Let (bindings, body) -> (* let bindings cannot refer to other variables actively bound in same let expr *)
       let entries = List.map (fun (name, e) -> 
-        let v = interpret_expression dynenv e
-        in (name, VariableEntry v)
-      ) bindings
+        (name, VariableEntry (interpret_expression dynenv e))) bindings
       in interpret_expression (entries @ dynenv) body
-  
-  (*
-  let (>>) f g x = g (f x) in           (* forward compose *)
-  let (<$>) f x = List.map f x in       (* fmap *)
-
-  let make_entry =
-    interpret_expression dynenv
-    >> fun v -> VariableEntry v
-    >> fun entry name -> (name, entry)
-  in bindings
-    |> (fun (name, expr) -> make_entry expr name) <$> bindings
-    |> ((@) dynenv)
-    |> flip interpret_expression body
-  *)
-
   | Cond clauses -> 
       let rec eval = function 
       | [] -> raise (RuntimeError "cond expression ran out of clauses")
       | (pred, body) :: cs -> 
           match interpret_expression dynenv pred with
-          | Bool false -> eval cs 
-          | _ -> interpret_expression dynenv body
+          | Bool false -> eval cs
+          | _ -> interpret_expression dynenv body (* all other values are truthy *)
       in eval clauses 
 
   (* | Call (_,_) ->  *)
@@ -106,18 +87,16 @@ let interpret_binding dynenv b : dynamic_env =
       let v = interpret_expression dynenv e in
       Printf.printf "%s = %s\n%!" x (string_of_expr v);
       (x, VariableEntry v) :: dynenv
+  | FunctionBinding f -> (f.name, FunctionEntry (f, dynenv)) :: dynenv
   | TopLevelExpr e ->
       let v = interpret_expression dynenv e in
       print_endline (string_of_expr v);
       dynenv
-  | TestBinding e -> 
+  | TestBinding e -> begin
       match interpret_expression dynenv e with 
       | Bool true -> dynenv
       | _ -> raise (RuntimeError (string_of_expr e ^ " fails"))
-  (* | FunctionBinding { name; params; body } ->  *)
-      (* name :: dynenv *)
-      (* match interpret_expression  *)
-      (* raise (RuntimeError "not yet implemented") *)
+      end
 
 
 (* the semantics of a whole program (sequence of bindings) *)
