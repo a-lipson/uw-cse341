@@ -8,7 +8,6 @@ type pattern =
   | ConsPattern of pattern * pattern
   | StructPattern of string * pattern list
 [@@deriving show]
-let string_of_pattern = show_pattern
 
 
 type expr =
@@ -35,7 +34,7 @@ type expr =
   | Closure of func_args * dynamic_env
   | Lambda of func_args
 
-  (* these three do *not* parse!! *)
+  (* these three do not parse *)
   | StructConstructor of string * expr list
   | StructAccess of string * int * expr
   | StructPredicate of string * expr
@@ -44,11 +43,19 @@ type expr =
 
   | Print of expr
 [@@deriving show]
-and func_args = { rec_name: string option; lambda_param_names: string list; lambda_body: expr }
+and func_args = 
+  { rec_name: string option
+  ; lambda_param_names: string list
+  ; lambda_body: expr }
 [@@deriving show]
-and function_binding = { func_name: string; param_names: string list; body: expr }
+and function_binding = 
+  { func_name: string
+  ; param_names: string list
+  ; body: expr }
 [@@deriving show]
-and struct_binding = { struct_name: string; field_names: string list }
+and struct_binding = 
+  { struct_name: string
+  ; field_names: string list }
 [@@deriving show]
 and binding =
    | VarBinding of string * expr
@@ -60,6 +67,9 @@ and binding =
 and dynamic_env = (string * expr) list
 [@@deriving show]
 
+
+(* let string_of_entry = show_entry *)
+let string_of_pattern = show_pattern
 let string_of_expr = show_expr
 let string_of_binding = show_binding
 let string_of_dynamic_env = show_dynamic_env
