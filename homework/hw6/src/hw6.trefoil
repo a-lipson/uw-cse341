@@ -1,12 +1,64 @@
 ; stdlib functions 
 
 ; reverse
-
-; any 
+(define (reverse-aux l acc) 
+  (cond 
+    ((nil? l) acc)
+    ((cons? l) (reverse-aux (cdr l)))
+    (true l))) ; return input if reversing a non-list
+(define (reverse l) (reverse-aux l nil))
 
 ; all 
+(define (all l)
+  (cond 
+    ((nil? l) true)
+    ((cons? l) cond 
+      ((= false (car l)) false)
+      ((= true  (car l)) (all (cdr l))))
+    (true l))) ; return input if applying all to non-list
+
+; any ~= not all false
+(define (any l)
+  (cond
+    ((nil? l) false)
+    ((cons? l) cond
+      ((= true  (car l)) true)
+      ((= false (car l)) (any (cdr l))))
+    (true l))) ; return input if applying any to non-list
+
+; max 
+(define (max-aux l x)
+  (cond
+    ((nil? l) x) 
+    ((cons? l) (let 
+      ((m (if (> (car l) x) (car l) x))) 
+      (max-aux (cdr l) m)))))
+(define (max l) 
+  (cond
+    (cons? l) (max-aux l (car l))
+    (true l))) ; return input if applying max to non-list
+
+; min 
+(define (min-aux l x)
+  (cond
+    ((nil? l) x) 
+    ((cons? l) (let 
+      ((m (if (< (car l) x) (car l) x))) 
+      (max-aux (cdr l) m)))))
+(define (min l) 
+  (cond
+    (cons? l) (min-aux l (car l))
+    (true l))) ; return input if applying min to non-list
+
+; sum 
+(define (sum-aux l acc)
+  ((nil? l) acc)
+  ((cons? l) (sum-aux l (+ (car l) acc))))
+(define (sum l) (sum-aux l 0))
 
 ; zip 
+
+; range n
 
 ; enum
 

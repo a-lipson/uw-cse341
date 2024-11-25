@@ -118,18 +118,17 @@ let%test "intepret let" = Ast.Int 4  = ie0 (eos "(let ((x 3)) (+ x 1))"         
 let%test "intepret let" = Ast.Int 2  = ie0 (eos "(let ((x 1)) (let ((x 2)) x))"            )
 let%test "intepret let" = Ast.Int 21 = ie0 (eos "(let ((x 2)) (* (let ((x 3)) x) (+ x 5)))")
 
-(* provided tests *)
-let%test _ = Ast.Int 3 = ie0 (eos "(+ ; comment test \n1 2)")
-let%test _ = Ast.Nil = ie0 (eos "nil")
-let%test _ = Ast.Cons (Ast.Int 1, Ast.Int 2) = ie0 (eos "(cons 1 2)")
-let%test _ = Ast.Int 1 = ie0 (eos "(car (cons 1 2))")
-let%test _ = Ast.Int 2 = ie0 (eos "(cdr (cons 1 2))")
-let%test _ = Ast.Int 3 = ieab0 (bsos "(define x (+ 1 2))", eos "x")
+let%test "interpret let multi var" = Ast.Int 7 = ie0 (eos "(let ((x 3) (y 4)) (+ x y))")
+let%test "interpret let no var" = Ast.Int 0 = ie0 (eos "(let () 0)")
+let%test "interpret let swap" = Ast.Int 1 = ie0 (eos "(let ((x 3) (y 4)) (let ((x y) (y x)) (- x y)))")
 
-let%test "parse test" = "(test true)" |> bos = 
-  Ast.TestBinding (Ast.Bool true)
-let%test "parse test" = "(test (= 1 1))" |> bos = 
-  Ast.TestBinding (Ast.Eq (Ast.Int 1, Ast.Int 1))
+(* provided tests *)
+let%test "intepret comment" = Ast.Int 3 = ie0 (eos "(+ ; comment test \n1 2)")
+let%test "intepret nil" = Ast.Nil = ie0 (eos "nil")
+let%test "intepret define" = Ast.Int 3 = ieab0 (bsos "(define x (+ 1 2))", eos "x")
+
+let%test "parse test" = "(test true)" |> bos = Ast.TestBinding (Ast.Bool true)
+let%test "parse test" = "(test (= 1 1))" |> bos = Ast.TestBinding (Ast.Eq (Ast.Int 1, Ast.Int 1))
 
 let ast_error_binding_test = ast_error_test bos
 
@@ -146,8 +145,13 @@ let%test "intepret failing test" = runtime_error_test (ibs0 % bsos) "(define x 3
 let%test "intepret car" = Ast.Car (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Int 1
 let%test "intepret cdr" = Ast.Cdr (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Bool true
 
+let%test "interpret car" = Ast.Int 1 = ie0 (eos "(car (cons 1 2))")
+let%test "interpret cdr" = Ast.Int 2 = ie0 (eos "(cdr (cons 1 2))")
+
 let%test "intepret car nested" = Ast.Let ([( "x", Ast.Int 1 )], Ast.Car (Ast.Cons (Ast.Var "x", Ast.Bool true))) |> ie0 = Ast.Int 1
 let%test "intepret car nested" = Ast.Car (Ast.Cons (Ast.Let ([("x", Ast.Int 1)], Ast.Var "x"), Ast.Nil)) |> ie0 = Ast.Int 1
+
+let%test "interpret cons" = Ast.Cons (Ast.Int 1, Ast.Int 2) = ie0 (eos "(cons 1 2)")
 
 let%test "parse cons?" = Ast.IsCons (Ast.Cons (Ast.Int 1, Ast.Bool true)) = eos "(cons? (cons 1 true))"
 let%test "intepret cons?" = Ast.IsCons (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Bool true
@@ -177,25 +181,29 @@ let%test "parse cond empty" = "(cond)" |> eos = Ast.Cond []
 let%test "parse cond malformed" = ast_error_parse_test "(cond ())"
 let%test "parse cond malformed" = ast_error_parse_test "(cond (true))"
 
-let%test "multi var let" = Ast.Int 7 = ie0 (eos "(let ((x 3) (y 4)) (+ x y))")
-let%test "no var let" = Ast.Int 0 = ie0 (eos "(let () 0)")
-let%test "let swap" = Ast.Int 1 = ie0 (eos "(let ((x 3) (y 4)) (let ((x y) (y x)) (- x y)))")
-
-let%test "basic cond" = 
-  Ast.Int 42 = ie0 (eos "(cond ((= 0 1) 17) ((= 0 0) 42))")
-
-let%test "empty cond" = try ignore (ie0 (eos "(cond)")); false
-             with RuntimeError _ -> true
-
 let%test "cond parsing malformed" =
   try ignore (eos "(cond true 0)"); false
   with AbstractSyntaxError _ -> true
 
-(* TODO: write interpret cond tests *)
+let%test "interpret cond basic" = ("(cond ((= 0 1) 17) ((= 0 0) 42))" |> eos |> ie0) = Ast.Int 42
 
-(* TODO: write parsing function bindings tests *)
+let%test "interpret cond" = ("(cond (true 1))" |> eos |> ie0) = Ast.Int 1 
+let%test "interpret cond" = ("(let ((x 1)) (cond ((= x 1) 1) ((= x 2) 2)))" |> eos |> ie0) = Ast.Int 1
 
-(* TODO: write parsing function call tests *)
+let%test "interpret cond empty" = 
+  try ignore (ie0 (eos "(cond)")); false
+  with RuntimeError _ -> true
+
+let%test "interpret cond no truthy clauses" = 
+  try ignore ("(cond (false 0) ((= 0 1) 0))" |> eos |> ie0); false 
+  with RuntimeError _ -> true
+
+let%test "parse function define" = "(define (f x) (+ x 1))" |> eos = 
+  Ast.Call ("define", [Ast.Call ("f", [Ast.Var "x"]); Ast.Add (Ast.Var "x", Ast.Int 1)])
+let%test "parse function binding" = "(define (f x) (+ x 1))" |> bos = 
+  Ast.FunctionBinding { name = "f"; param_names = ["x"]; body = Ast.Add (Ast.Var "x", Ast.Int 1)}
+
+(* let%test "interpret function call" = *)
 
 let%test "basic function" =
   let program =
@@ -236,8 +244,6 @@ let sum_binding =
 let%test "sum_countdown" =
   Ast.Int 55 = ieab0 (bsos (countdown_binding ^ sum_binding),
                          eos "(sum (countdown 10))")
-
-
 
 let sum_cond_binding =
   "(define (sum l)
