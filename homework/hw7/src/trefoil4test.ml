@@ -55,7 +55,7 @@ let%test "interpret if" = Ast.If (Ast.Bool false, Ast.Int 1, Ast.Int 2) |> ie0 =
 (* let%test "interpret mul" = Ast.Mul (Ast.Int 1, Ast.Int 2) |> ie0 = Ast.Int 2 *)
 
 (* test environment *)
-let xto3 = [("x", VariableEntry (Ast.Int 3))]
+let xto3 = [("x", Ast.Int 3)]
 
 let%test _ = Ast.Int 3 = ie xto3 (eos "x")
 
@@ -81,10 +81,11 @@ let%test "interpret add wrong types" = runtime_error_interp_test "(+ 1 true)"
 let%test "interpret sub wrong types" = runtime_error_interp_test "(- 1 true)"
 let%test "interpret mul wrong types" = runtime_error_interp_test "(* 1 true)"
 
-let%test "interpret eq wrong types" = runtime_error_interp_test "(= 1 true)"
-let%test "interpret eq wrong types" = runtime_error_interp_test "(= true 1)"
-
 (* don't want these tests since we have dynamic typing *)
+
+(* let%test "interpret eq wrong types" = runtime_error_interp_test "(= 1 true)" *)
+(* let%test "interpret eq wrong types" = runtime_error_interp_test "(= true 1)" *)
+
 (* let%test "test_if_wrong_types" = runtime_error_interp_test "(if true 1 true)" *)
 (* let%test "test_if_wrong_types" = runtime_error_interp_test "(if true true 1)" *)
 
@@ -110,20 +111,20 @@ let ast_error_parse_test = ast_error_test eos
 let%test "parse let malformed" = ast_error_parse_test "(let ())"
 let%test "parse let malformed" = ast_error_parse_test "(let (x 1) ())"
 let%test "parse let malformed" = ast_error_parse_test "(let ((x 1)) )"
-let%test "parse let malformed duplicate" = ast_error_parse_test "(let ((x 1) (x 1)) 1)"
+let%test "parse let malformed duplicate" = ast_error_parse_test "(let ((x 1) (x 2)) 1)"
 
-let%test "intepret let" = Ast.Int 4  = ie0 (eos "(let ((x 3)) (+ x 1))"                    )
-let%test "intepret let" = Ast.Int 2  = ie0 (eos "(let ((x 1)) (let ((x 2)) x))"            )
-let%test "intepret let" = Ast.Int 21 = ie0 (eos "(let ((x 2)) (* (let ((x 3)) x) (+ x 5)))")
+let%test "interpret let" = Ast.Int 4  = ie0 (eos "(let ((x 3)) (+ x 1))"                    )
+let%test "interpret let" = Ast.Int 2  = ie0 (eos "(let ((x 1)) (let ((x 2)) x))"            )
+let%test "interpret let" = Ast.Int 21 = ie0 (eos "(let ((x 2)) (* (let ((x 3)) x) (+ x 5)))")
 
 let%test "interpret let multi var" = Ast.Int 7 = ie0 (eos "(let ((x 3) (y 4)) (+ x y))")
 let%test "interpret let no var" = Ast.Int 0 = ie0 (eos "(let () 0)")
 let%test "interpret let swap" = Ast.Int 1 = ie0 (eos "(let ((x 3) (y 4)) (let ((x y) (y x)) (- x y)))")
 
 (* provided tests *)
-let%test "intepret comment" = Ast.Int 3 = ie0 (eos "(+ ; comment test \n1 2)")
-let%test "intepret nil" = Ast.Nil = ie0 (eos "nil")
-let%test "intepret define" = Ast.Int 3 = ieab0 (bsos "(define x (+ 1 2))", eos "x")
+let%test "interpret comment" = Ast.Int 3 = ie0 (eos "(+ ; comment test \n1 2)")
+let%test "interpret nil" = Ast.Nil = ie0 (eos "nil")
+let%test "interpret define" = Ast.Int 3 = ieab0 (bsos "(define x (+ 1 2))", eos "x")
 
 let%test "parse test" = "(test true)" |> bos = Ast.TestBinding (Ast.Bool true)
 let%test "parse test" = "(test (= 1 1))" |> bos = Ast.TestBinding (Ast.Eq (Ast.Int 1, Ast.Int 1))
@@ -134,28 +135,28 @@ let%test "parse test malformed" = ast_error_binding_test "(test ())"
 let%test "parse test malformed" = ast_error_binding_test "(test 1 true)"
 
 (* ensure that no exception is thrown while interpreting *)
-let%test_unit "intepret test" =
+let%test_unit "interpret test" =
   let program = "(define x 3) (test (= 3 x))" in
   program |> bsos |> ibs0 |> ignore
 
-let%test "intepret failing test" = runtime_error_test (ibs0 % bsos) "(define x 3) (test (= 2 x))"
+let%test "interpret failing test" = runtime_error_test (ibs0 % bsos) "(define x 3) (test (= 2 x))"
 
-let%test "intepret car" = Ast.Car (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Int 1
-let%test "intepret cdr" = Ast.Cdr (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Bool true
+let%test "interpret car" = Ast.Car (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Int 1
+let%test "interpret cdr" = Ast.Cdr (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Bool true
 
 let%test "interpret car" = Ast.Int 1 = ie0 (eos "(car (cons 1 2))")
 let%test "interpret cdr" = Ast.Int 2 = ie0 (eos "(cdr (cons 1 2))")
 
-let%test "intepret car nested" = Ast.Let ([( "x", Ast.Int 1 )], Ast.Car (Ast.Cons (Ast.Var "x", Ast.Bool true))) |> ie0 = Ast.Int 1
-let%test "intepret car nested" = Ast.Car (Ast.Cons (Ast.Let ([("x", Ast.Int 1)], Ast.Var "x"), Ast.Nil)) |> ie0 = Ast.Int 1
+let%test "interpret car nested" = Ast.Let ([( "x", Ast.Int 1 )], Ast.Car (Ast.Cons (Ast.Var "x", Ast.Bool true))) |> ie0 = Ast.Int 1
+let%test "interpret car nested" = Ast.Car (Ast.Cons (Ast.Let ([("x", Ast.Int 1)], Ast.Var "x"), Ast.Nil)) |> ie0 = Ast.Int 1
 
 let%test "interpret cons" = Ast.Cons (Ast.Int 1, Ast.Int 2) = ie0 (eos "(cons 1 2)")
 
 let%test "parse cons?" = Ast.IsCons (Ast.Cons (Ast.Int 1, Ast.Bool true)) = eos "(cons? (cons 1 true))"
-let%test "intepret cons?" = Ast.IsCons (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Bool true
-let%test "intepret cons?" = Ast.IsCons (Ast.Bool true)                       |> ie0 = Ast.Bool false
+let%test "interpret cons?" = Ast.IsCons (Ast.Cons (Ast.Int 1, Ast.Bool true)) |> ie0 = Ast.Bool true
+let%test "interpret cons?" = Ast.IsCons (Ast.Bool true)                       |> ie0 = Ast.Bool false
 
-let%test "intepret cons? nested" = Ast.IsCons (Ast.Cdr (Ast.Cons (Ast.Nil, Ast.Cons (Ast.Nil, Ast.Nil)))) |> ie0 = Ast.Bool true
+let%test "interpret cons? nested" = Ast.IsCons (Ast.Cdr (Ast.Cons (Ast.Nil, Ast.Cons (Ast.Nil, Ast.Nil)))) |> ie0 = Ast.Bool true
 
 let%test "parse cons? malformed" = ast_error_interp_test "(cons?)"
 let%test "parse cons? malformed" = ast_error_interp_test "(cons? ())"
@@ -163,10 +164,10 @@ let%test "parse cons? malformed" = ast_error_interp_test "(cons? 1 2)"
 (* wrong type input not applicable, should return false *)
 
 let%test "parse nil?" = Ast.IsNil Ast.Nil = eos "(nil? nil)"
-let%test "intepret nil?" = Ast.IsNil Ast.Nil         |> ie0 = Ast.Bool true
-let%test "intepret nil?" = Ast.IsNil (Ast.Bool true) |> ie0 = Ast.Bool false
+let%test "interpret nil?" = Ast.IsNil Ast.Nil         |> ie0 = Ast.Bool true
+let%test "interpret nil?" = Ast.IsNil (Ast.Bool true) |> ie0 = Ast.Bool false
 
-let%test "intepret nil? nested" = Ast.IsNil (Ast.Car (Ast.Cons (Ast.Nil, Ast.Int 1))) |> ie0 = Ast.Bool true
+let%test "interpret nil? nested" = Ast.IsNil (Ast.Car (Ast.Cons (Ast.Nil, Ast.Int 1))) |> ie0 = Ast.Bool true
 
 let%test "parse nil? malformed" = ast_error_interp_test "(nil?)"
 let%test "parse nil? malformed" = ast_error_interp_test "(nil? ())"
@@ -196,12 +197,12 @@ let%test "interpret cond no truthy clauses" =
   try ignore ("(cond (false 0) ((= 0 1) 0))" |> eos |> ie0); false 
   with RuntimeError _ -> true
 
+(* TODO: fix this test (it's fucked) *)
 let%test "parse function define" = "(define (f x) (+ x 1))" |> eos = 
-  Ast.Call ("define", [Ast.Call ("f", [Ast.Var "x"]); Ast.Add (Ast.Var "x", Ast.Int 1)])
-let%test "parse function binding" = "(define (f x) (+ x 1))" |> bos = 
-  Ast.FunctionBinding { name = "f"; param_names = ["x"]; body = Ast.Add (Ast.Var "x", Ast.Int 1)}
+  Ast.Call (Ast.Var "define", [Ast.Call (Ast.Var "f", [Ast.Var "x"]); Ast.Add (Ast.Var "x", Ast.Int 1)])
 
-(* let%test "interpret function call" = *)
+let%test "parse function binding" = "(define (f x) (+ x 1))" |> bos = 
+  Ast.FunctionBinding { func_name = "f"; param_names = ["x"]; body = Ast.Add (Ast.Var "x", Ast.Int 1)}
 
 let%test "basic function" =
   let program =
@@ -252,6 +253,35 @@ let%test "sum cond" =
   let program = countdown_binding ^ sum_cond_binding in
   Ast.Int 55 = ieab0 (bsos program, eos "(sum (countdown 10))")
 
+
+(* TODO: add symbols tests *)
+let%test "parse symbol" = "('test)" |> eos = Trefoil4lib.Ast.Call (Trefoil4lib.Ast.Symbol "test", [])
+
+let%test "parse symbol empty" = ast_error_parse_test "(')"
+
+(* TODO: add print tests *)
+let%test "parse print" = "(print 1)" |> eos = Ast.Print (Ast.Int 1) 
+
+(* should this be an error? *)
+let%test "parse print empty" = ast_error_parse_test "(print)"
+
+let%test "interpret print" = ("(print 1)" |> eos |> ie0) = Ast.Nil 
+
+
+(* TODO: add closure tests *)
+(*
+parsing tests 
+
+interpret tests 
+ *)
+
+
+(* TODO: add lambda tests *)
+
+(* TODO: add more equality tests
+ structural equality
+ closures -> error 
+ nested closures -> error *)
 
 let%test "struct mycons accessors" =
   let program = "(struct mycons mycar mycdr)" in
