@@ -129,8 +129,7 @@ let rec expr_of_pst p =
           let pair_clause = function 
             | Node [pat; body] -> 
                 let p = pattern_of_pst pat in 
-                print_endline ("var of pattern: " ^ String.concat ", " (vars_of_pattern p));
-                p |> vars_of_pattern 
+                p |> vars_of_pattern (* duplicate var pattern check *)
                   |> ensure_unique (AbstractSyntaxError ("Duplicate variable pattern in match expression " ^ string_of_pattern p)) 
                   |> ignore;
                 (p, expr_of_pst body)
@@ -143,6 +142,8 @@ let rec expr_of_pst p =
             (pst_error "Expected lambda function parameter to be a symbol but got " p)
             (pst_error "Duplicate lambda function parameter name " p)
           in Lambda { rec_name = None; lambda_param_names = param_names; lambda_body = expr_of_pst body}
+      | Symbol "lambda", [Node _] -> raise (pst_error "Lambda expression missing body " p)
+      | Symbol "lambda", _ -> raise (pst_error "Lambda expression missing arguments " p)
 
       | f, args -> Call (expr_of_pst f, List.map expr_of_pst args)
 

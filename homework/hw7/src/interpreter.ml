@@ -47,9 +47,7 @@ let rec interpret_pattern pattern value : dynamic_env option =
       | StructConstructor (s', vs) when 
         s = s' && List.length ps = List.length vs ->
         let bs = List.map2 interpret_pattern ps vs in 
-      List.fold_left (fun acc b -> 
-        Option.bind acc (fun b' -> Option.map (List.append b') b))
-        (Some []) bs
+        List.fold_left (fun acc b -> Option.bind acc (fun b' -> Option.map (List.append b') b)) (Some []) bs
       | _ -> None
       end 
 
@@ -201,7 +199,7 @@ let interpret_binding dynenv b : dynamic_env =
   match b with
   | VarBinding (x, e) ->
       let v = interpret_expression dynenv e in
-      Printf.printf "%s = %s\n%!" x (string_of_expr v);
+      (* Printf.printf "%s = %s\n%!" x (string_of_expr v); *)
       (x, v) :: dynenv
 
   | FunctionBinding f -> let func =
@@ -216,12 +214,13 @@ let interpret_binding dynenv b : dynamic_env =
       dynenv
       
   | StructBinding s ->
-      let func params body = Lambda { rec_name = None; lambda_param_names = params; lambda_body = body } in
-      let constructor        = (s.struct_name          , func s.field_names (StructConstructor (s.struct_name, (List.map (fun n -> Var n) s.field_names)))) in
-      let predicate          = (s.struct_name ^ "?"    , func ["x"]         (StructPredicate   (s.struct_name, Var "x"))                                  ) in
-      let field_accessor f i = (s.struct_name ^ "-" ^ f, func ["x"]         (StructAccess      (s.struct_name, i, Var "x"))                               ) in  
-      let (_, field_accessors) = List.fold_left_map (fun i f -> (i + 1, field_accessor f i) ) 0 s.field_names in
-      constructor :: predicate :: field_accessors @ dynenv
+      let var_field_names = List.map (fun n -> Var n) s.field_names
+      in let func params body = Lambda { rec_name = None; lambda_param_names = params; lambda_body = body }
+      in let constructor        = (s.struct_name          , func s.field_names (StructConstructor (s.struct_name, var_field_names)))
+      in let predicate          = (s.struct_name ^ "?"    , func ["x"]         (StructPredicate   (s.struct_name, Var "x")        ))
+      in let field_accessor f i = (s.struct_name ^ "-" ^ f, func ["x"]         (StructAccess      (s.struct_name, i, Var "x")     ))
+      in let (_, field_accessors) = List.fold_left_map (fun i f -> (i + 1, field_accessor f i)) 0 s.field_names
+      in constructor :: predicate :: field_accessors @ dynenv
 
   | TestBinding e -> begin
       match interpret_expression dynenv e with 
