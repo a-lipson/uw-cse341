@@ -1,6 +1,7 @@
 open Ast
 open Errors
 
+
 let string_of_dynenv_entry (x, v) = x ^ " -> " ^ string_of_expr v
 
 let rec lookup (dynenv : dynamic_env) name =
@@ -11,6 +12,7 @@ let rec lookup (dynenv : dynamic_env) name =
       then Some value
       else lookup dynenv name
 
+
 let rec interpret_pattern pattern value : dynamic_env option =
   match pattern, value with
   | WildcardPattern, _ -> Some []
@@ -19,7 +21,6 @@ let rec interpret_pattern pattern value : dynamic_env option =
       | Some l1, Some l2 -> Some (l1 @ l2)
       | _                -> None
       end
-  (* TODO: add cases for other kinds of patterns here *)
   | NilPattern, v -> begin
       match v with 
       | Nil -> Some []
@@ -73,10 +74,10 @@ let rec equals e1 e2 =
 
 let rec interpret_expression dynenv expr : (* value *) expr =
   let int_binop f le re name = 
-      match interpret_expression dynenv le, interpret_expression dynenv re with 
-      | Int n1, Int n2 -> f n1 n2
-      | Int _, v2 -> raise (RuntimeError (name ^ " applied to non-integer " ^ string_of_expr v2))
-      | v1,     _ -> raise (RuntimeError (name ^ " applied to non-integer " ^ string_of_expr v1))
+    match interpret_expression dynenv le, interpret_expression dynenv re with 
+    | Int n1, Int n2 -> f n1 n2
+    | Int _ , v2     -> raise (RuntimeError (name ^ " applied to non-integer " ^ string_of_expr v2))
+    | v1    , _      -> raise (RuntimeError (name ^ " applied to non-integer " ^ string_of_expr v1))
 
   in match expr with
   | Nil       -> expr
@@ -87,10 +88,8 @@ let rec interpret_expression dynenv expr : (* value *) expr =
 
   | Var x     -> begin 
       match lookup dynenv x with
-      | None ->   
-          (* print_endline ("current env " ^ string_of_dynamic_env dynenv); *)
-          raise (RuntimeError ("Unbound var " ^ x))
       | Some e -> interpret_expression dynenv e 
+      | None   -> raise (RuntimeError ("Unbound var " ^ x))
       end
 
   | Add (e1, e2) -> Int  (int_binop ( + ) e1 e2 "Add")
@@ -135,8 +134,7 @@ let rec interpret_expression dynenv expr : (* value *) expr =
       end
 
   | Let (bindings, body) -> (* let bindings cannot refer to other variables actively bound in same let expr *)
-      let entries = List.map (fun (name, e) -> 
-        (name, interpret_expression dynenv e)) bindings
+      let entries = List.map (fun (name, e) -> (name, interpret_expression dynenv e)) bindings
       in interpret_expression (entries @ dynenv) body
 
   | Cond clauses -> 
@@ -169,17 +167,8 @@ let rec interpret_expression dynenv expr : (* value *) expr =
           | Some n -> (n, Closure (f, env)) :: ext
           | None   -> ext
           in 
-          (* print_endline ("extended env to " ^ string_of_dynamic_env (newenv @ env)); *)
           interpret_expression (newenv @ env) f.lambda_body
-      | _ -> raise (RuntimeError ("Expression not a function " ^ string_of_expr e)) (* TODO: fix this error message! *)
-      (* match lookup dynenv e with (* callenv = current dynamic environment *) *)
-      (* | Some (Closure (f, env)) ->  *)
-      (*     if List.length args <> List.length f.param_names  *)
-      (*     then raise (RuntimeError ("Incorrect number of arguments supplied to function " ^ name)); *)
-      (*     let vals = List.map (fun v -> VariableEntry (interpret_expression dynenv v)) args  *)
-      (*     in let extended_environment = (name, FunctionEntry (f, defenv)) :: (List.combine f.param_names vals) @ env  *)
-      (*     in interpret_expression extended_environment f.body  *)
-      (* | _ -> raise (RuntimeError ("Unbound function " ^ name)) *)
+      | _ -> raise (RuntimeError ("Expression not a function " ^ string_of_expr e))
       end
 
   | Lambda args -> Closure (args, dynenv) 
@@ -187,15 +176,19 @@ let rec interpret_expression dynenv expr : (* value *) expr =
   | StructConstructor (s, es) -> StructConstructor (s, List.map (interpret_expression dynenv) es)
   | StructPredicate (s, e) -> begin 
       match interpret_expression dynenv e with 
-      (* we technically didn't cover then when guard language feature... but, the other way is syntactically noisy while this is cleaner; i am willing to lose points to reduce redundancy *)
+      (* we technically didn't cover then `when` guard language feature... 
+         but, the other way is syntactically noisy while this is cleaner; 
+         i am willing to lose points to reduce redundancy *)
       | StructConstructor (s', _) when String.equal s s' -> Bool true 
       | _ -> Bool false
       end
   | StructAccess (s, i, e) -> begin 
       match interpret_expression dynenv e with 
       | StructConstructor (s', vs) -> 
-          if not (String.equal s s') then raise (RuntimeError ("Incorrect accessor for struct " ^ string_of_expr e))
-          else if i >= List.length vs || i < 0 then raise (RuntimeError ("Invalid accessor index for struct " ^ string_of_expr e))
+          if not (String.equal s s') 
+          then raise (RuntimeError ("Incorrect accessor for struct " ^ string_of_expr e))
+          else if i >= List.length vs || i < 0 
+          then raise (RuntimeError ("Invalid accessor index for struct " ^ string_of_expr e))
           else List.nth vs i
       | _ -> raise (RuntimeError ("Struct accessor '" ^ s ^ "' applied to non-struct " ^ string_of_expr e))
       end 
@@ -222,7 +215,7 @@ let interpret_binding dynenv b : dynamic_env =
       print_endline (string_of_expr v);
       dynenv
       
-  | StructBinding s -> (* NOTE: might need to be a closure here to capture current environment? *)
+  | StructBinding s ->
       let func params body = Lambda { rec_name = None; lambda_param_names = params; lambda_body = body } in
       let constructor        = (s.struct_name          , func s.field_names (StructConstructor (s.struct_name, (List.map (fun n -> Var n) s.field_names)))) in
       let predicate          = (s.struct_name ^ "?"    , func ["x"]         (StructPredicate   (s.struct_name, Var "x"))                                  ) in

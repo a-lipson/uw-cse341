@@ -1,4 +1,5 @@
 open Trefoil4lib
+open Ast
 open Errors
 
 let ie dynenv e = Interpreter.interpret_expression dynenv e
@@ -23,10 +24,14 @@ let runtime_error_test f s =
   try s |> f |> ignore; false 
   with RuntimeError _ -> true
 
+(* util function tests *)
+let%test "ensure_unique duplicates" = ast_error_test (ensure_unique (AbstractSyntaxError "err")) ["x"; "x"; "x"]
+let%test "ensure_unique no duplicates" = ensure_unique (AbstractSyntaxError "err") ["x"; "y"] = ["x"; "y"]
 
-let%test _ = Ast.Int 3 = ie0 (eos "3")
-let%test _ = Ast.Int (-10) = ie0 (eos "-10")
-(* let%test "interpret_true" = Ast.Bool true = ie0 (eos "true") *)
+
+let%test "interpret int" = Ast.Int 3 = ie0 (eos "3")
+let%test "interpret negative int" = Ast.Int (-10) = ie0 (eos "-10")
+let%test "interpret true" = Ast.Bool true = ie0 (eos "true")
 
 let%test "parse false" = Ast.Bool false = eos "false"
 let%test "parse true"  = Ast.Bool true  = eos "true"
@@ -50,19 +55,18 @@ let%test "interpret if" = Ast.If (Ast.Bool true , Ast.Int 1, Ast.Int 2) |> ie0 =
 let%test "interpret if" = Ast.If (Ast.Int  0    , Ast.Int 1, Ast.Int 2) |> ie0 = Ast.Int 1
 let%test "interpret if" = Ast.If (Ast.Bool false, Ast.Int 1, Ast.Int 2) |> ie0 = Ast.Int 2
 
-(* let%test "interpret add" = Ast.Add (Ast.Int 1, Ast.Int 2) |> ie0 = Ast.Int 3 *)
-(* let%test "interpret sub" = Ast.Sub (Ast.Int 1, Ast.Int 2) |> ie0 = Ast.Int (-1) *)
-(* let%test "interpret mul" = Ast.Mul (Ast.Int 1, Ast.Int 2) |> ie0 = Ast.Int 2 *)
+let%test "interpret add" = Ast.Add (Ast.Int 1, Ast.Int 2) |> ie0 = Ast.Int 3
+let%test "interpret sub" = Ast.Sub (Ast.Int 1, Ast.Int 2) |> ie0 = Ast.Int (-1)
+let%test "interpret mul" = Ast.Mul (Ast.Int 1, Ast.Int 2) |> ie0 = Ast.Int 2
 
 (* test environment *)
 let xto3 = [("x", Ast.Int 3)]
+let%test "intepret with environment"     = Ast.Int 3 = ie xto3 (eos "x")
+let%test "intepret with bad environment" = 
+  try ignore (ie xto3 (eos "y")); false
+  with RuntimeError _ -> true
 
-let%test _ = Ast.Int 3 = ie xto3 (eos "x")
-
-let%test _ = try ignore (ie xto3 (eos "y")); false
-             with RuntimeError _ -> true
-let%test _ = Ast.Int 3 = ie0 (eos "(+ 1 2)")
-
+let%test "parse then intepret add" = Ast.Int 3 = ie0 (eos "(+ 1 2)")
 
 let ast_error_interp_test = ast_error_test (ie0 % eos)
 
@@ -89,13 +93,13 @@ let%test "interpret mul wrong types" = runtime_error_interp_test "(* 1 true)"
 (* let%test "test_if_wrong_types" = runtime_error_interp_test "(if true 1 true)" *)
 (* let%test "test_if_wrong_types" = runtime_error_interp_test "(if true true 1)" *)
 
+let%test "intepret equals wrong types" = runtime_error_interp_test "(= 4 true)" 
+
 let%test "interpret sub" = Ast.Int (-1) = ie0 (eos "(- 1 2)")
 let%test "interpret mul" = Ast.Int 6 = ie0 (eos "(* 2 3)")
 
-let%test _ = Ast.Bool true  = ie0 (eos "(= 3 (+ 1 2))")
-let%test _ = Ast.Bool false = ie0 (eos "(= 4 (+ 1 2))")
-
-(* let%test _ = runtime_error_interp_test "(= 4 true)"  *)
+let%test "intepret equals" = Ast.Bool true  = ie0 (eos "(= 3 (+ 1 2))")
+let%test "intepret equals" = Ast.Bool false = ie0 (eos "(= 4 (+ 1 2))")
 
 let%test "interpret if" = Ast.Int 0 = ie0 (eos "(if true 0 1)" )
 let%test "interpret if" = Ast.Int 1 = ie0 (eos "(if false 0 1)")
@@ -126,7 +130,7 @@ let%test "interpret comment" = Ast.Int 3 = ie0 (eos "(+ ; comment test \n1 2)")
 let%test "interpret nil" = Ast.Nil = ie0 (eos "nil")
 let%test "interpret define" = Ast.Int 3 = ieab0 (bsos "(define x (+ 1 2))", eos "x")
 
-let%test "parse test" = "(test true)" |> bos = Ast.TestBinding (Ast.Bool true)
+let%test "parse test" = "(test true)"    |> bos = Ast.TestBinding (Ast.Bool true)
 let%test "parse test" = "(test (= 1 1))" |> bos = Ast.TestBinding (Ast.Eq (Ast.Int 1, Ast.Int 1))
 
 let ast_error_binding_test = ast_error_test bos

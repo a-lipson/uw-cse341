@@ -47,13 +47,11 @@ let ensure_symbol err = function
   | Pst.Symbol s -> s 
   | _ -> raise err
 
-let ensure_unique err l = 
-  let rec aux seen = function 
-    | [] -> true
-    | x :: xs -> if List.mem x seen then false else aux (x :: seen) xs 
-  in if aux l [] then l else raise err
-  (* if List.length (List.sort_uniq (fun _ _ -> 0) l) <> List.length l  *)
-  (* then raise err; l *)
+let ensure_unique err l =
+  let rec has_duplicates seen = function
+    | [] -> false 
+    | x :: xs -> List.mem x seen || has_duplicates (x :: seen) xs
+  in if has_duplicates [] l then raise err else l
 
 let ensure_unique_symbols err_sym err_uniq = ensure_unique err_uniq % List.map (ensure_symbol err_sym) 
 
@@ -131,6 +129,7 @@ let rec expr_of_pst p =
           let pair_clause = function 
             | Node [pat; body] -> 
                 let p = pattern_of_pst pat in 
+                print_endline ("var of pattern: " ^ String.concat ", " (vars_of_pattern p));
                 p |> vars_of_pattern 
                   |> ensure_unique (AbstractSyntaxError ("Duplicate variable pattern in match expression " ^ string_of_pattern p)) 
                   |> ignore;
