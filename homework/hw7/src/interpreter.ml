@@ -63,7 +63,7 @@ let rec interpret_expression dynenv expr : (* value *) expr =
   | Var x     -> begin 
       match lookup dynenv x with
       | None ->   
-          print_endline ("current env " ^ string_of_dynamic_env dynenv);
+          (* print_endline ("current env " ^ string_of_dynamic_env dynenv); *)
           raise (RuntimeError ("Unbound var " ^ x))
       | Some e -> interpret_expression dynenv e 
       end
@@ -134,12 +134,12 @@ let rec interpret_expression dynenv expr : (* value *) expr =
           let vs = List.map (interpret_expression dynenv) args
           in let ext = List.combine f.lambda_param_names vs
           in let newenv = match f.rec_name with 
-          | Some n -> (n, f.lambda_body) :: ext
-          | None      -> ext
+          | Some n -> (n, Closure (f, env)) :: ext
+          | None   -> ext
           in 
-          print_endline ("extended env with " ^ string_of_dynamic_env newenv);
+          (* print_endline ("extended env to " ^ string_of_dynamic_env (newenv @ env)); *)
           interpret_expression (newenv @ env) f.lambda_body
-      | _ -> raise (RuntimeError ("Not a function? " ^ string_of_expr e)) (* TODO: fix this error message! *)
+      | _ -> raise (RuntimeError ("Expression not a function " ^ string_of_expr e)) (* TODO: fix this error message! *)
       (* match lookup dynenv e with (* callenv = current dynamic environment *) *)
       (* | Some (Closure (f, env)) ->  *)
       (*     if List.length args <> List.length f.param_names  *)
@@ -178,7 +178,13 @@ let interpret_binding dynenv b : dynamic_env =
       let v = interpret_expression dynenv e in
       Printf.printf "%s = %s\n%!" x (string_of_expr v);
       (x, v) :: dynenv
-  | FunctionBinding f -> (f.func_name, f.body) :: dynenv
+
+  | FunctionBinding f -> let func =
+        { rec_name           = Some f.func_name 
+        ; lambda_param_names = f.param_names 
+        ; lambda_body        = f.body } in
+        (f.func_name, Closure (func, dynenv)) :: dynenv
+
   | TopLevelExpr e ->
       let v = interpret_expression dynenv e in
       print_endline (string_of_expr v);
