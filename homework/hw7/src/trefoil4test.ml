@@ -254,15 +254,14 @@ let%test "sum cond" =
   Ast.Int 55 = ieab0 (bsos program, eos "(sum (countdown 10))")
 
 
-(* TODO: add symbols tests *)
 let%test "parse symbol" = "('test)" |> eos = Trefoil4lib.Ast.Call (Trefoil4lib.Ast.Symbol "test", [])
 
 let%test "parse symbol empty" = ast_error_parse_test "(')"
 
-(* TODO: add print tests *)
-let%test "parse print" = "(print 1)" |> eos = Ast.Print (Ast.Int 1) 
+(* TODO: add interpret symbol tests *)
 
-(* should this be an error? *)
+
+let%test "parse print" = "(print 1)" |> eos = Ast.Print (Ast.Int 1) 
 let%test "parse print empty" = ast_error_parse_test "(print)"
 
 let%test "interpret print" = ("(print 1)" |> eos |> ie0) = Ast.Nil 
@@ -282,6 +281,17 @@ interpret tests
  structural equality
  closures -> error 
  nested closures -> error *)
+
+
+let%test "parse match" = "(match l (nil 0) ((cons x xs) 1))" |> eos = 
+  Ast.Match (Ast.Var "l", [(Ast.NilPattern, Ast.Int 0); (Ast.ConsPattern (Ast.VarPattern "x", Ast.VarPattern "xs"), Ast.Int 1)])
+
+let%test "parse match empty" = ast_error_parse_test "(match)"
+(* match can take no clauses? *)
+(* let%test "parse match no clauses" = ast_error_parse_test "(match x)" *)
+
+(* TODO: add interpret match tests *)
+
 
 let%test "struct mycons accessors" =
   let program = "(struct mycons mycar mycdr)" in

@@ -6,35 +6,40 @@ include Ast_types
 let (%) f g x = f (g x)
 
 
-let rec pattern_of_pst p =
+let rec pattern_of_pst (p : Pst.pst) =
   match p with
-  | Pst.Symbol sym -> begin
+  | Symbol sym -> begin
       match int_of_string_opt sym with
-      | Some n -> failwith "TODO: build an int pattern with n here"
+      | Some i -> IntPattern i 
       | None ->
-         match sym with
-         | "_"     -> WildcardPattern
-         | "nil"   -> NilPattern
-         | "true"  -> BoolPattern true
-         | "false" -> BoolPattern false
-         | _ ->
-            if String.get sym 0 = '\'' (* if the string starts with an apostrophe *)
-            then let sym_without_apostrophe = String.sub sym 1 (String.length sym - 1)
-                 in failwith "TODO: build a symbol pattern using sym_without_apostrophe"
-            else failwith "TODO: build a variable pattern using sym"
-    end
-  | Pst.Node [] -> raise (AbstractSyntaxError "Expected pattern but got '()'")
-  | Pst.Node (head :: args) ->
-     match head, args with
-     | Pst.Symbol "cons", [p1; p2] -> ConsPattern (pattern_of_pst p1, pattern_of_pst p2)
-     | Pst.Symbol s, ps -> 
-         (* TODO: build a struct pattern using pattern ps *)
-         failwith "TODO: build a struct pattern using patterns ps"
-     | _ -> raise (AbstractSyntaxError ("Expected pattern, but got " ^ Pst.string_of_pst p))
+          match sym with
+          | "_"     -> WildcardPattern
+          | "nil"   -> NilPattern
+          | "true"  -> BoolPattern true
+          | "false" -> BoolPattern false
+          | _ -> 
+              if String.get sym 0 = '\''
+              then let name = (String.sub sym 1 (String.length sym - 1)) in
+                if name = "" then raise (AbstractSyntaxError "Invalid empty symbol pattern");
+                SymbolPattern name
+              else VarPattern sym 
+      end
+  | Node [] -> raise (AbstractSyntaxError "Expected pattern but got '()'")
+  | Node (head :: args) ->
+      match head, args with
+      | Pst.Symbol "cons", [p1; p2] -> ConsPattern (pattern_of_pst p1, pattern_of_pst p2)
+      | Pst.Symbol s, ps -> StructPattern (s, List.map pattern_of_pst ps)
+      | _ -> raise (AbstractSyntaxError ("Expected pattern, but got " ^ Pst.string_of_pst p))
 
 
 let pattern_of_string = pattern_of_pst % Pstparser.pst_of_string
 
+let rec vars_of_pattern (p : pattern) : string list = 
+    match p with 
+    | VarPattern s -> [s]
+    | ConsPattern (p1, p2) -> vars_of_pattern p1 @ vars_of_pattern p2
+    | StructPattern (s, ps) -> s :: List.fold_left (@) [] (List.map vars_of_pattern ps)
+    | _ -> [] 
 
 let pst_error info pst = AbstractSyntaxError (info ^ Pst.string_of_pst pst)
 
@@ -58,25 +63,26 @@ let rec expr_of_pst p =
     raise (AbstractSyntaxError (info ^ " expects " ^ string_of_int n ^ " args but got " ^ Pst.string_of_pst p))
 
   in let op    sym c = function (* args = match args with *)
-      | [p] -> c (expr_of_pst p)
-      | _   -> raise_expect_args 1 ("operator " ^ sym)
+    | [p] -> c (expr_of_pst p)
+    | _   -> raise_expect_args 1 ("operator " ^ sym)
   in let binop sym c = function
-      | [left; right] -> c (expr_of_pst left) (expr_of_pst right)
-      | _   -> raise_expect_args 2 ("operator " ^ sym)
+    | [left; right] -> c (expr_of_pst left) (expr_of_pst right)
+    | _   -> raise_expect_args 2 ("operator " ^ sym)
 
   in match p with
   | Symbol sym -> begin
-      if String.get sym 0 = '\'' 
-      then
-        let name = (String.sub sym 1 (String.length sym - 1)) in
-        if name = "" then raise (AbstractSyntaxError "Invalid empty symbol");
-        Symbol name
-      else try Int (int_of_string sym) with
-      Failure _ -> match sym with
-          | "true"  -> Bool true
-          | "false" -> Bool false
-          | "nil"   -> Nil
-          | _       -> Var sym
+    if String.get sym 0 = '\'' 
+    then let name = (String.sub sym 1 (String.length sym - 1)) in
+      if name = "" then raise (AbstractSyntaxError "Invalid empty symbol");
+      Symbol name
+    else match int_of_string_opt sym with
+    | Some i -> Int i
+    | _ -> 
+        match sym with
+        | "true"  -> Bool true
+        | "false" -> Bool false
+        | "nil"   -> Nil
+        | _       -> Var sym
     end
 
   | Node [] -> raise (AbstractSyntaxError "Expected expression but got '()'")
@@ -100,7 +106,7 @@ let rec expr_of_pst p =
       | Symbol "if"   , _                  -> raise_expect_args 3 "if expression" 
 
       | Symbol "let"  , [Node defs; body] -> 
-          let bind seen = function
+          let bind seen = function (* TODO: refactor to use existing ensure_unique *)
           | Node [Symbol name; pst] -> 
               if List.mem name seen 
               then raise (pst_error ("Duplicate binding '" ^ name ^ "' in let expression ") p)
@@ -117,9 +123,21 @@ let rec expr_of_pst p =
 
       | Symbol "cond", clauses ->  
           let pair_clause = function 
-          | Node [pred; body] -> (expr_of_pst pred, expr_of_pst body)
-          | p -> raise (pst_error "Malformed clause in cond expression " p)
+            | Node [pred; body] -> (expr_of_pst pred, expr_of_pst body)
+            | p -> raise (pst_error "Malformed clause in cond expression " p)
           in Cond (List.map pair_clause clauses)
+
+      | Symbol "match", head :: clauses -> 
+          let pair_clause = function 
+            | Node [pat; body] -> 
+                let p = pattern_of_pst pat in 
+                p |> vars_of_pattern 
+                  |> ensure_unique (AbstractSyntaxError ("Duplicate variable pattern in match expression " ^ string_of_pattern p)) 
+                  |> ignore;
+                (p, expr_of_pst body)
+            | p -> raise (pst_error "Malformed clause in match expression" p)
+          in Match (expr_of_pst head, List.map pair_clause clauses)
+      | Symbol "match", _ -> raise (pst_error "Match expression missing head expression to match on " p)
       
       | Symbol "lambda", [Node params; body] -> 
           let param_names = params |> ensure_unique_symbols 
@@ -150,7 +168,7 @@ let binding_of_pst p = match p with
       | Symbol "test", [p] -> TestBinding (expr_of_pst p)
       | Symbol "test", _ -> raise (pst_error "Malformed test " p)
 
-      | Symbol "struct", (Symbol name :: fields) -> 
+      | Symbol "struct", Symbol name :: fields -> 
           let field_names = fields |> ensure_unique_symbols 
             (pst_error "Expected struct field name to be a symbol but got " p)
             (pst_error "Duplicate struct field name " p)

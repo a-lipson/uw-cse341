@@ -17,15 +17,40 @@ let rec interpret_pattern pattern value : dynamic_env option =
   | ConsPattern (p1, p2), Cons (v1, v2) -> begin
       match interpret_pattern p1 v1, interpret_pattern p2 v2 with
       | Some l1, Some l2 -> Some (l1 @ l2)
-      | _ -> None
+      | _                -> None
       end
   (* TODO: add cases for other kinds of patterns here *)
-  | NilPattern, _ 
-  | VarPattern _, _ 
-  | IntPattern _, _
-  | BoolPattern _, _ 
-  | SymbolPattern _, _ 
-  | StructPattern _, _
+  | NilPattern, v -> begin
+      match v with 
+      | Nil -> Some []
+      | _   -> None
+      end
+  | VarPattern    x, v -> Some [(x, v)]  
+  | IntPattern    i, v -> begin (* more mundane uses of the guard clause that reduce verbosity*)
+      match v with 
+      | Int i' when i = i'    -> Some [] 
+      | _                     -> None
+      end
+  | BoolPattern   b, v -> begin
+      match v with 
+      | Bool b' when b = b'   -> Some []
+      | _                     -> None
+      end
+  | SymbolPattern s, v -> begin 
+      match v with 
+      | Symbol s' when s = s' -> Some []
+      | _                     -> None 
+      end
+  | StructPattern (s, ps), v -> begin 
+      match v with 
+      | StructConstructor (s', vs) when 
+        s = s' && List.length ps = List.length vs ->
+        let bs = List.map2 interpret_pattern ps vs in 
+      List.fold_left (fun acc b -> 
+        Option.bind acc (fun b' -> Option.map (List.append b') b))
+        (Some []) bs
+      | _ -> None
+      end 
 
   | _ -> None
 
@@ -72,7 +97,6 @@ let rec interpret_expression dynenv expr : (* value *) expr =
   | Sub (e1, e2) -> Int  (int_binop ( - ) e1 e2 "Sub")
   | Mul (e1, e2) -> Int  (int_binop ( * ) e1 e2 "Mul")
 
-  (* TODO: update eq to perform structural equality check (cannot contain closures!) *)
   | Eq  (e1, e2) -> 
       let v1 = interpret_expression dynenv e1 in 
       let v2 = interpret_expression dynenv e2 in 
@@ -117,14 +141,22 @@ let rec interpret_expression dynenv expr : (* value *) expr =
 
   | Cond clauses -> 
       let rec eval = function 
-      | [] -> raise (RuntimeError "cond expression ran out of clauses")
+      | [] -> raise (RuntimeError "Cond expression exhausted clauses")
       | (pred, body) :: cs -> 
           match interpret_expression dynenv pred with
           | Bool false -> eval cs
           | _ -> interpret_expression dynenv body (* all other values are truthy *)
       in eval clauses 
 
-  | Match _ -> expr
+  | Match (head, clauses) -> 
+      let v = interpret_expression dynenv head in 
+      let rec eval = function 
+        | [] -> raise (RuntimeError "Match expression exhausted clauses")
+        | (p, e) :: cs -> 
+            match interpret_pattern p v with 
+            | Some env -> interpret_expression (dynenv @ env) e
+            | None     -> eval cs
+      in eval clauses
 
   | Call (e, args) -> begin
       match interpret_expression dynenv e with 
